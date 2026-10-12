@@ -1,9 +1,12 @@
 import enum
+from datetime import date as date_type
 from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -64,6 +67,23 @@ class Asset(Base):
     symbol: Mapped[str] = mapped_column(String(20), unique=True, index=True)  # ex: AAPL
     name: Mapped[str] = mapped_column(String(150))
     asset_type: Mapped[AssetType] = mapped_column(Enum(AssetType))
+
+
+# ---------- Historique de cours (données de marché journalières) ----------
+class PriceHistory(Base):
+    __tablename__ = "price_history"
+    __table_args__ = (UniqueConstraint("asset_id", "date", name="uq_price_asset_date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"), index=True)
+    date: Mapped[date_type] = mapped_column(Date)
+    open: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    high: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    low: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    close: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    volume: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    asset: Mapped["Asset"] = relationship()
 
 
 # ---------- Portefeuille ----------

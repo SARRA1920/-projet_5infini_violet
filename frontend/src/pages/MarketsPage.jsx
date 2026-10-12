@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { filters, quotes } from "../data/maquette.js";
+import { filters, quotes as maquetteQuotes } from "../data/maquette.js";
 
 function Sparkline({ points, up }) {
   const d = points.map((y, index) => `${index ? "L" : "M"}${index * 16},${y}`).join(" ");
@@ -15,7 +15,23 @@ export default function MarketsPage() {
   const [params] = useSearchParams();
   const [group, setGroup] = useState("tous");
   const [notice, setNotice] = useState("");
+  const [quotes, setQuotes] = useState(maquetteQuotes);
+  const [live, setLive] = useState(false);
   const query = (params.get("q") || "").trim().toLowerCase();
+
+  useEffect(() => {
+    fetch("/quotes")
+      .then((response) => {
+        if (!response.ok) throw new Error("cours indisponibles");
+        return response.json();
+      })
+      .then((rows) => {
+        const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
+        setQuotes(maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row));
+        setLive(true);
+      })
+      .catch(() => setLive(false));
+  }, []);
 
   const rows = useMemo(
     () =>
@@ -27,7 +43,7 @@ export default function MarketsPage() {
           row.name.toLowerCase().includes(query);
         return matchesGroup && matchesQuery;
       }),
-    [group, query],
+    [quotes, group, query],
   );
 
   const cards = quotes.filter((row) => ["SFBT", "BIAT", "AAPL", "TSLA"].includes(row.symbol));
@@ -38,7 +54,11 @@ export default function MarketsPage() {
         <div>
           <p className="page-kicker">TradeLab / Marchés</p>
           <h1>Marchés</h1>
-          <p className="page-lead">Suivez les cours de la maquette et repérez les variations.</p>
+          <p className="page-lead">
+            {live
+              ? "Cours importés par Twelve Data. Les titres absents de cet import restent la maquette."
+              : "Cours de la maquette : l'historique Twelve Data n'est pas encore importé."}
+          </p>
         </div>
         <button type="button" className="primary-btn" onClick={() => setNotice("Les alertes seront branchées avec les données de marché.")}>
           Créer une alerte
@@ -60,7 +80,7 @@ export default function MarketsPage() {
         <div className="panel-head">
           <div>
             <h2>Cotations en direct</h2>
-            <p>Chiffres de la maquette, pas encore le flux de marché.</p>
+            <p>{live ? "Dernier cours enregistré dans l'historique Twelve Data." : "Chiffres de la maquette."}</p>
           </div>
           <div className="ranges">
             {filters.map((item) => (

@@ -34,7 +34,7 @@ ASSETS = [
     ("GBP/USD", "Livre sterling / Dollar américain", AssetType.FOREX),
     ("USD/JPY", "Dollar américain / Yen japonais", AssetType.FOREX),
     ("XAU/USD", "Or / Dollar américain", AssetType.COMMODITY),
-    ("WTI", "Pétrole brut WTI", AssetType.COMMODITY),
+    ("USO", "United States Oil Fund (ETF pétrole brut WTI)", AssetType.COMMODITY),
     ("TLT", "iShares 20+ Year Treasury Bond ETF", AssetType.BOND),
 ]
 
