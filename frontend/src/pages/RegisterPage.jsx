@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function RegisterPage() {
@@ -39,58 +40,72 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="screen">
-      <form className="card" onSubmit={onSubmit}>
-        <h1>Inscription</h1>
-        <p className="muted">Un portefeuille de 100 000 est créé avec le compte.</p>
-        <label>
-          E-mail
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
+    <AuthLayout>
+      <form className="auth-form" onSubmit={onSubmit}>
+        <p className="auth-kicker">Nouveau trader</p>
+        <h2>Créez votre compte</h2>
+        <p className="auth-lead">Un portefeuille de 100 000 est ouvert avec l'inscription.</p>
+
+        <label className="field">
+          Adresse e-mail
+          <span className="field-box">
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="vous@exemple.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </span>
         </label>
-        <label>
+        <label className="field">
           Nom d'utilisateur
-          <input
-            type="text"
-            autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-          />
+          <span className="field-box">
+            <input
+              type="text"
+              autoComplete="username"
+              placeholder="Votre nom dans la salle"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+          </span>
         </label>
-        <label>
+        <label className="field">
           Mot de passe
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <span className="field-box">
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="8 caractères minimum"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </span>
         </label>
-        <label>
+        <label className="field">
           Confirmer le mot de passe
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
-            required
-          />
+          <span className="field-box">
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="Répétez le mot de passe"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              required
+            />
+          </span>
         </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={pending}>
-          {pending ? "Création…" : "Créer le compte"}
+        {error && <p className="auth-error">{error}</p>}
+        <button className="auth-submit" type="submit" disabled={pending}>
+          {pending ? "Création…" : "Créer le compte →"}
         </button>
-        <p className="muted">
+        <p className="auth-switch">
           Déjà un compte ? <Link to="/login">Se connecter</Link>
         </p>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

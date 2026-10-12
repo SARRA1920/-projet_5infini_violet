@@ -21,12 +21,12 @@ export function AuthProvider({ children }) {
       .finally(() => setReady(true));
   }, []);
 
-  async function login(email, password) {
+  async function login(email, password, remember = true) {
     const data = await api("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    setToken(data.access_token);
+    setToken(data.access_token, remember);
     const me = await api("/auth/me");
     setUser(me);
   }
