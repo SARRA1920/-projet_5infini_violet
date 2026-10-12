@@ -28,7 +28,7 @@ export default function MarketsPage() {
       .then((rows) => {
         const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
         setQuotes(maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row));
-        setLive(true);
+        setLive(rows.length > 0);
       })
       .catch(() => setLive(false));
   }, []);
