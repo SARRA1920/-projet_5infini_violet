@@ -1,0 +1,538 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  background: #0b1220;
+  color: #e8eef8;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem 0.85rem 1rem;
+  background: #090f1c;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.shell-brand {
+  padding: 0.35rem 0.55rem 1rem;
+}
+
+.shell-brand .brand-name {
+  color: #f4f7fb;
+}
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow: auto;
+}
+
+.nav-section {
+  margin: 1rem 0.7rem 0.35rem;
+  color: #6f7d92;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0.12rem 0;
+  padding: 0.62rem 0.75rem;
+  border-radius: 10px;
+  color: #b7c3d4;
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.nav-badge {
+  margin-left: auto;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.65rem;
+  font-style: normal;
+}
+
+.market-status {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin-top: auto;
+  padding: 0.8rem;
+  border-radius: 12px;
+  background: #10192b;
+}
+
+.market-status strong,
+.market-status p {
+  margin: 0;
+}
+
+.market-status p {
+  color: #8ea0b8;
+  font-size: 0.78rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3dd68c;
+  box-shadow: 0 0 0 4px rgba(61, 214, 140, 0.15);
+}
+
+.shell-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  background: #121a2b;
+  color: #8ea0b8;
+}
+
+.search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  padding: 0.7rem 0;
+  background: transparent;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.search-clear {
+  border: 0;
+  background: transparent;
+  color: #8ea0b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.top-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+}
+
+.index-pill {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(61, 214, 140, 0.12);
+  color: #3dd68c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.icon-btn,
+.user-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #121a2b;
+  color: #e8eef8;
+  cursor: pointer;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0.7rem 0.25rem 0.25rem;
+  border-radius: 999px;
+  text-align: left;
+}
+
+.user-chip strong,
+.user-chip em {
+  display: block;
+  font-style: normal;
+}
+
+.user-chip strong {
+  font-size: 0.85rem;
+}
+
+.user-chip em {
+  color: #8eb7ff;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #5b4dff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pop {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  z-index: 5;
+  width: 240px;
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: #121a2b;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.pop p {
+  margin: 0 0 0.6rem;
+  color: #b7c3d4;
+}
+
+.pop button {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.55rem;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.shell-content {
+  padding: 1.4rem 1.6rem 2rem;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.page-kicker {
+  margin: 0 0 0.35rem;
+  color: #8eb7ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.page h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  letter-spacing: -0.03em;
+}
+
+.page-lead {
+  margin: 0.35rem 0 0;
+  color: #93a0b5;
+}
+
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #2f7cf6;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.banner {
+  margin: 0 0 1rem;
+  color: #8eb7ff;
+}
+
+.stat-grid,
+.ticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.8rem;
+}
+
+.stat-card,
+.ticker-card,
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: #121a2b;
+}
+
+.stat-card,
+.ticker-card {
+  padding: 0.95rem 1rem;
+}
+
+.stat-card p,
+.ticker-card p {
+  margin: 0;
+  color: #93a0b5;
+  font-size: 0.85rem;
+}
+
+.stat-card strong,
+.ticker-card strong {
+  display: block;
+  margin: 0.45rem 0 0.2rem;
+  font-size: 1.25rem;
+}
+
+.stat-card em,
+.ticker-card em {
+  font-style: normal;
+  font-size: 0.82rem;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 0.9fr;
+  gap: 0.8rem;
+  margin: 0.8rem 0;
+}
+
+.panel {
+  padding: 1rem 1rem 0.6rem;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panel-head p,
+.perf-line span:last-child {
+  margin: 0.2rem 0 0;
+  color: #93a0b5;
+  font-size: 0.82rem;
+}
+
+.panel-head a {
+  color: #8eb7ff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ranges {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.range {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  background: transparent;
+  color: #93a0b5;
+  cursor: pointer;
+}
+
+.range.active {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.perf-line {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  margin: 0.8rem 0 0.2rem;
+}
+
+.perf-line .up {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.perf-chart {
+  width: 100%;
+  height: auto;
+}
+
+.up {
+  color: #3dd68c;
+}
+
+.down {
+  color: #ff5d73;
+}
+
+.alloc {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.donut {
+  width: 168px;
+  height: 168px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.donut div {
+  width: 104px;
+  height: 104px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #121a2b;
+  text-align: center;
+}
+
+.donut strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.donut span {
+  color: #93a0b5;
+  font-size: 0.75rem;
+}
+
+.alloc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+
+.alloc li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.35rem 0;
+  color: #c5d0de;
+  font-size: 0.82rem;
+}
+
+.alloc i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.alloc b {
+  margin-left: auto;
+}
+
+.ticker-grid {
+  margin-bottom: 0.8rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+}
+
+.data-table th {
+  color: #8ea0b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.data-table td strong,
+.data-table td span {
+  display: block;
+}
+
+.data-table td span {
+  color: #8ea0b8;
+  font-size: 0.78rem;
+}
+
+.empty-panel {
+  padding: 1.4rem;
+}
+
+.empty-panel p {
+  color: #93a0b5;
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .side-nav {
+    flex-direction: row;
+    overflow: auto;
+  }
+
+  .nav-section,
+  .market-status {
+    display: none;
+  }
+
+  .stat-grid,
+  .ticker-grid,
+  .dash-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

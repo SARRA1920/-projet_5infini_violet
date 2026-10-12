@@ -31,7 +31,7 @@ export default function RegisterPage() {
     setPending(true);
     try {
       await register(email.trim(), username.trim(), password);
-      navigate("/");
+      navigate("/accueil");
     } catch (err) {
       setError(err.message);
     } finally {

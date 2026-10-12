@@ -39,7 +39,7 @@ export default function LoginPage() {
     setPending(true);
     try {
       await login(email.trim(), password, remember);
-      navigate("/");
+      navigate("/accueil");
     } catch (err) {
       setError(err.message);
     } finally {
