@@ -1,29 +1,37 @@
-import { useEffect, useState } from "react";
+import { Route, Routes } from "react-router-dom";
+import GuestRoute from "./components/GuestRoute.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import HomePage from "./pages/HomePage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
 
 export default function App() {
-  const [status, setStatus] = useState("chargement…");
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    fetch("/health")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => setStatus(data.status))
-      .catch(() => {
-        setError(true);
-        setStatus("backend injoignable");
-      });
-  }, []);
-
   return (
-    <main style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>Simulateur de Salle de Marché</h1>
-      <p>
-        Statut du backend :{" "}
-        <strong style={{ color: error ? "crimson" : "green" }}>{status}</strong>
-      </p>
-    </main>
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <RegisterPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
