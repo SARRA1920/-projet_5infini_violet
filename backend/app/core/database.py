@@ -10,6 +10,11 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:password@db:5432/salle_marche",
 )
 
+# On impose le pilote psycopg2 (celui installé via requirements.txt) :
+# sans cela, SQLAlchemy peut choisir un autre pilote ("psycopg") non installé.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
