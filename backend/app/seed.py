@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.core.database import SessionLocal
+from app.core.security import hash_password
 from app.models.models import (
     Asset,
     AssetType,
@@ -17,8 +18,8 @@ from app.models.models import (
     UserRole,
 )
 
-# Mot de passe provisoire : NON hashé, donc inutilisable pour se connecter.
-# À remplacer par un vrai hash une fois le module d'authentification en place.
+# Comptes de démo locaux. Le mot de passe est haché avant d'être écrit en base.
+SEED_PASSWORD = "motdepasse123"
 PLACEHOLDER_PASSWORD = "PLACEHOLDER_NOT_A_REAL_HASH_CHANGE_ME"
 
 ASSETS = [
@@ -85,17 +86,20 @@ def main() -> None:
 
         for email, username, role in USERS:
             user = db.scalar(select(User).where(User.email == email))
-            if user:
-                skipped.append(f"User {email}")
-            else:
+            if user is None:
                 user = User(
                     email=email,
                     username=username,
-                    hashed_password=PLACEHOLDER_PASSWORD,
+                    hashed_password=hash_password(SEED_PASSWORD),
                     role=role,
                 )
                 db.add(user)
                 created.append(f"User {email}")
+            elif user.hashed_password == PLACEHOLDER_PASSWORD:
+                user.hashed_password = hash_password(SEED_PASSWORD)
+                created.append(f"Mot de passe de {email}")
+            else:
+                skipped.append(f"User {email}")
 
             # Portefeuille par défaut : créé seulement si l'utilisateur n'en a aucun.
             has_portfolio = user.id is not None and db.scalar(
