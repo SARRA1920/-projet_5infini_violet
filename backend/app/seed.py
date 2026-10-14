@@ -2,6 +2,7 @@
 
 Lancement : python -m app.seed
 """
+import os
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -18,8 +19,10 @@ from app.models.models import (
     UserRole,
 )
 
-# Comptes de démo locaux. Le mot de passe est haché avant d'être écrit en base.
-SEED_PASSWORD = "motdepasse123"
+# Mot de passe des comptes de démo, lu dans l'environnement. Jamais écrit dans le dépôt.
+SEED_PASSWORD = os.getenv("SEED_PASSWORD")
+if not SEED_PASSWORD:
+    raise RuntimeError("SEED_PASSWORD manquant : ajoutez-le dans .env")
 PLACEHOLDER_PASSWORD = "PLACEHOLDER_NOT_A_REAL_HASH_CHANGE_ME"
 
 ASSETS = [
