@@ -2,6 +2,18 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell.jsx";
 import GuestRoute from "./components/GuestRoute.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
+import {
+  AdminAudit,
+  AdminDashboard,
+  AdminFormation,
+  AdminMarkets,
+  AdminModels,
+  AdminResults,
+  AdminScenarios,
+  AdminSettings,
+  AdminUsers,
+} from "./pages/admin/AdminPages.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
@@ -119,16 +131,17 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/administration"
-          element={
-            <ModulePage
-              crumb="TradeLab / Communauté"
-              title="Administration"
-              lead="Gestion des comptes et des rôles."
-            />
-          }
-        />
+        <Route path="/administration" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="marches" element={<AdminMarkets />} />
+          <Route path="formation" element={<AdminFormation />} />
+          <Route path="scenarios" element={<AdminScenarios />} />
+          <Route path="parametres" element={<AdminSettings />} />
+          <Route path="modeles" element={<AdminModels />} />
+          <Route path="resultats" element={<AdminResults />} />
+          <Route path="audit" element={<AdminAudit />} />
+        </Route>
       </Route>
     </Routes>
   );

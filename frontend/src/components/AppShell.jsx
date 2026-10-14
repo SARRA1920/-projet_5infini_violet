@@ -150,6 +150,10 @@ export default function AppShell() {
 
   const initials = (user?.username || "?").slice(0, 2).toUpperCase();
   const roleLabel = user?.role === "admin" ? "Admin" : "Trader Pro";
+  const groups = NAV.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.to !== "/administration" || user?.role === "admin"),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <div className="shell">
@@ -166,7 +170,7 @@ export default function AppShell() {
         </div>
 
         <nav className="side-nav">
-          {NAV.map((group) => (
+          {groups.map((group) => (
             <div key={group.section || "main"}>
               {group.section && <p className="nav-section">{group.section}</p>}
               {group.items.map((item) => (
