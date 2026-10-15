@@ -8,6 +8,14 @@ const SIDES = [
   { id: "sell", label: "Vendre" },
 ];
 
+// Nos catégories d'actifs
+const ASSET_GROUPS = [
+  { id: "actions", label: "Actions" },
+  { id: "obligations", label: "Obligations" },
+  { id: "devises", label: "Devises" },
+  { id: "matieres", label: "Matières Premières" },
+];
+
 // Accepte la virgule française ; reste une chaîne envoyée telle quelle.
 function decimalText(value) {
   return value.trim().replace(",", ".");
@@ -16,6 +24,7 @@ function decimalText(value) {
 export default function TradingPage() {
   const [quotes, setQuotes] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
+  const [activeGroup, setActiveGroup] = useState("actions"); // Onglet actif par défaut
   const [symbol, setSymbol] = useState("");
   const [side, setSide] = useState("buy");
   const [quantity, setQuantity] = useState("");
@@ -36,11 +45,20 @@ export default function TradingPage() {
     api("/quotes")
       .then((rows) => {
         setQuotes(rows);
-        if (rows.length > 0) setSymbol(rows[0].symbol);
+        // Sélectionner le premier actif de la catégorie "actions" par défaut
+        const firstStock = rows.find((row) => row.group === "actions");
+        if (firstStock) setSymbol(firstStock.symbol);
       })
       .catch((err) => setNotice(`Cours indisponibles : ${err.message}`));
     loadPortfolio();
   }, []);
+
+  // Quand on change d'onglet, on met à jour le symbole sélectionné
+  function changeGroup(group_id) {
+    setActiveGroup(group_id);
+    const firstInGroup = quotes.find((row) => row.group === group_id);
+    if (firstInGroup) setSymbol(firstInGroup.symbol);
+  }
 
   function chooseSide(next) {
     setSide(next);
@@ -81,6 +99,8 @@ export default function TradingPage() {
     }
   }
 
+  // Filtrer les actifs pour ne montrer que ceux de l'onglet actif
+  const filteredQuotes = quotes.filter((row) => row.group === activeGroup);
   const selected = quotes.find((row) => row.symbol === symbol);
   const held = portfolio?.positions.find((row) => row.symbol === symbol);
 
@@ -118,18 +138,34 @@ export default function TradingPage() {
         <div className="panel-head">
           <div>
             <h2>Nouvel ordre</h2>
-            <p>Stop loss et take profit sont enregistrés avec l'achat, sans exécution automatique.</p>
+            
           </div>
         </div>
+
+        {/* --- NOUVEAU : Onglets des classes d'actifs --- */}
+        <div className="ranges" style={{ marginBottom: "20px", borderBottom: "1px solid #ccc" }}>
+          {ASSET_GROUPS.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              className={group.id === activeGroup ? "range active" : "range"}
+              onClick={() => changeGroup(group.id)}
+              style={{ borderRadius: "0", borderBottom: group.id === activeGroup ? "2px solid #3b82f6" : "none" }}
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
+
         <form className="trade-form" onSubmit={onSubmit}>
           <label className="trade-field">
             <span>Actif</span>
             <select
               value={symbol}
               onChange={(event) => setSymbol(event.target.value)}
-              disabled={quotes.length === 0}
+              disabled={filteredQuotes.length === 0}
             >
-              {quotes.map((row) => (
+              {filteredQuotes.map((row) => (
                 <option key={row.symbol} value={row.symbol}>
                   {row.symbol} — {row.name} · {row.last}
                 </option>
