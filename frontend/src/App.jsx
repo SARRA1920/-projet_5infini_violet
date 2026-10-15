@@ -1,29 +1,135 @@
-import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import AppShell from "./components/AppShell.jsx";
+import GuestRoute from "./components/GuestRoute.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import DashboardPage from "./pages/DashboardPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import MarketsPage from "./pages/MarketsPage.jsx";
+import ModulePage from "./pages/ModulePage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
+
+function PrivateShell() {
+  return (
+    <ProtectedRoute>
+      <AppShell />
+    </ProtectedRoute>
+  );
+}
 
 export default function App() {
-  const [status, setStatus] = useState("chargement…");
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    fetch("/health")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => setStatus(data.status))
-      .catch(() => {
-        setError(true);
-        setStatus("backend injoignable");
-      });
-  }, []);
-
   return (
-    <main style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>Simulateur de Salle de Marché</h1>
-      <p>
-        Statut du backend :{" "}
-        <strong style={{ color: error ? "crimson" : "green" }}>{status}</strong>
-      </p>
-    </main>
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <RegisterPage />
+          </GuestRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route element={<PrivateShell />}>
+        <Route path="/accueil" element={<DashboardPage />} />
+        <Route path="/marches" element={<MarketsPage />} />
+        <Route
+          path="/trading"
+          element={
+            <ModulePage
+              crumb="TradeLab / Trading"
+              title="Trading"
+              lead="Passez un ordre et suivez son effet sur le cash et les positions."
+            />
+          }
+        />
+        <Route
+          path="/portefeuille"
+          element={
+            <ModulePage
+              crumb="TradeLab / Portefeuille"
+              title="Portefeuille"
+              lead="Le détail des positions et du cash viendra du module trading."
+            />
+          }
+        />
+        <Route
+          path="/analyse"
+          element={
+            <ModulePage
+              crumb="TradeLab / Analyse"
+              title="Analyse"
+              lead="Les indicateurs et graphiques avancés seront ajoutés avec le module d'analyse."
+            />
+          }
+        />
+        <Route
+          path="/ia"
+          element={
+            <ModulePage
+              crumb="TradeLab / Intelligence"
+              title="IA & Prédictions"
+              lead="Prédiction, agent de trading et analyse de sentiment."
+            />
+          }
+        />
+        <Route
+          path="/stress-testing"
+          element={
+            <ModulePage
+              crumb="TradeLab / Intelligence"
+              title="Stress Testing"
+              lead="Scénarios de stress sur les banques synthétiques."
+            />
+          }
+        />
+        <Route
+          path="/actuariat"
+          element={
+            <ModulePage
+              crumb="TradeLab / Intelligence"
+              title="Actuariat"
+              lead="Les calculs actuariels seront ajoutés dans ce module."
+            />
+          }
+        />
+        <Route
+          path="/formation"
+          element={
+            <ModulePage
+              crumb="TradeLab / Communauté"
+              title="Formation"
+              lead="Parcours et exercices de la salle de marché."
+            />
+          }
+        />
+        <Route
+          path="/classement"
+          element={
+            <ModulePage
+              crumb="TradeLab / Communauté"
+              title="Classement"
+              lead="Comparaison des performances entre traders."
+            />
+          }
+        />
+        <Route
+          path="/administration"
+          element={
+            <ModulePage
+              crumb="TradeLab / Communauté"
+              title="Administration"
+              lead="Gestion des comptes et des rôles."
+            />
+          }
+        />
+      </Route>
+    </Routes>
   );
 }

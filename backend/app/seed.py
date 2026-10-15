@@ -2,11 +2,13 @@
 
 Lancement : python -m app.seed
 """
+import os
 from decimal import Decimal
 
 from sqlalchemy import select
 
 from app.core.database import SessionLocal
+from app.core.security import hash_password
 from app.models.models import (
     Asset,
     AssetType,
@@ -17,8 +19,10 @@ from app.models.models import (
     UserRole,
 )
 
-# Mot de passe provisoire : NON hashé, donc inutilisable pour se connecter.
-# À remplacer par un vrai hash une fois le module d'authentification en place.
+# Mot de passe des comptes de démo, lu dans l'environnement. Jamais écrit dans le dépôt.
+SEED_PASSWORD = os.getenv("SEED_PASSWORD")
+if not SEED_PASSWORD:
+    raise RuntimeError("SEED_PASSWORD manquant : ajoutez-le dans .env")
 PLACEHOLDER_PASSWORD = "PLACEHOLDER_NOT_A_REAL_HASH_CHANGE_ME"
 
 ASSETS = [
@@ -85,17 +89,20 @@ def main() -> None:
 
         for email, username, role in USERS:
             user = db.scalar(select(User).where(User.email == email))
-            if user:
-                skipped.append(f"User {email}")
-            else:
+            if user is None:
                 user = User(
                     email=email,
                     username=username,
-                    hashed_password=PLACEHOLDER_PASSWORD,
+                    hashed_password=hash_password(SEED_PASSWORD),
                     role=role,
                 )
                 db.add(user)
                 created.append(f"User {email}")
+            elif user.hashed_password == PLACEHOLDER_PASSWORD:
+                user.hashed_password = hash_password(SEED_PASSWORD)
+                created.append(f"Mot de passe de {email}")
+            else:
+                skipped.append(f"User {email}")
 
             # Portefeuille par défaut : créé seulement si l'utilisateur n'en a aucun.
             has_portfolio = user.id is not None and db.scalar(
