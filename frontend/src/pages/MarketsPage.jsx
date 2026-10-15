@@ -27,7 +27,12 @@ export default function MarketsPage() {
       })
       .then((rows) => {
         const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
-        setQuotes(maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row));
+        const maquetteSymbols = new Set(maquetteQuotes.map((row) => row.symbol));
+        // Les lignes de la maquette gardent leur place (remplacées par le vrai cours
+        // quand il existe), puis on ajoute tous les autres actifs de la base.
+        const merged = maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row);
+        const others = rows.filter((row) => !maquetteSymbols.has(row.symbol));
+        setQuotes([...merged, ...others]);
         setLive(rows.length > 0);
       })
       .catch(() => setLive(false));
