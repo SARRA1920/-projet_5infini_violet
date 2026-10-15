@@ -11,6 +11,16 @@ function Sparkline({ points, up }) {
   );
 }
 
+// Ordre d'affichage : actions, puis devises, puis matières premières ; ensuite par symbole.
+const GROUP_ORDER = { actions: 0, devises: 1, matieres: 2 };
+
+function compareRows(a, b) {
+  return (
+    (GROUP_ORDER[a.group] ?? 9) - (GROUP_ORDER[b.group] ?? 9) ||
+    a.symbol.localeCompare(b.symbol)
+  );
+}
+
 export default function MarketsPage() {
   const [params] = useSearchParams();
   const [group, setGroup] = useState("tous");
@@ -40,14 +50,16 @@ export default function MarketsPage() {
 
   const rows = useMemo(
     () =>
-      quotes.filter((row) => {
-        const matchesGroup = group === "tous" || row.group === group;
-        const matchesQuery =
-          !query ||
-          row.symbol.toLowerCase().includes(query) ||
-          row.name.toLowerCase().includes(query);
-        return matchesGroup && matchesQuery;
-      }),
+      quotes
+        .filter((row) => {
+          const matchesGroup = group === "tous" || row.group === group;
+          const matchesQuery =
+            !query ||
+            row.symbol.toLowerCase().includes(query) ||
+            row.name.toLowerCase().includes(query);
+          return matchesGroup && matchesQuery;
+        })
+        .sort(compareRows),
     [quotes, group, query],
   );
 
