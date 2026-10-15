@@ -1,0 +1,75 @@
+/* Pages Trading et Portefeuille : complète shell.css (thème sombre). */
+
+.trade-page .stat-grid {
+  margin-bottom: 0.8rem;
+}
+
+.trade-page .panel + .panel {
+  margin-top: 0.8rem;
+}
+
+.trade-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem;
+  align-items: end;
+  margin: 0.9rem 0 0.6rem;
+}
+
+.trade-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #93a0b5;
+  font-size: 0.82rem;
+}
+
+.trade-field input,
+.trade-field select {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.trade-field input:disabled,
+.trade-field select:disabled {
+  opacity: 0.45;
+}
+
+.trade-form .primary-btn {
+  justify-content: center;
+}
+
+.trade-form .primary-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.trade-error,
+.trade-ok {
+  margin: 0.2rem 0 0.6rem;
+  font-weight: 600;
+}
+
+.trade-error {
+  color: #ff5d73;
+}
+
+.trade-ok {
+  color: #3dd68c;
+}
+
+.trade-warning {
+  color: #f5b544;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.trade-page .data-table a {
+  color: #8eb7ff;
+}

@@ -6,7 +6,9 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
 import ModulePage from "./pages/ModulePage.jsx";
+import PortfolioPage from "./pages/PortfolioPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import TradingPage from "./pages/TradingPage.jsx";
 
 function PrivateShell() {
   return (
@@ -39,26 +41,8 @@ export default function App() {
       <Route element={<PrivateShell />}>
         <Route path="/accueil" element={<DashboardPage />} />
         <Route path="/marches" element={<MarketsPage />} />
-        <Route
-          path="/trading"
-          element={
-            <ModulePage
-              crumb="TradeLab / Trading"
-              title="Trading"
-              lead="Passez un ordre et suivez son effet sur le cash et les positions."
-            />
-          }
-        />
-        <Route
-          path="/portefeuille"
-          element={
-            <ModulePage
-              crumb="TradeLab / Portefeuille"
-              title="Portefeuille"
-              lead="Le détail des positions et du cash viendra du module trading."
-            />
-          }
-        />
+        <Route path="/trading" element={<TradingPage />} />
+        <Route path="/portefeuille" element={<PortfolioPage />} />
         <Route
           path="/analyse"
           element={

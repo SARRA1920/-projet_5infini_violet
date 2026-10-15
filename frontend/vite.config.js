@@ -16,6 +16,7 @@ export default defineConfig({
       "/health": { target: backend, changeOrigin: true },
       "/auth": { target: backend, changeOrigin: true },
       "/quotes": { target: backend, changeOrigin: true },
+      "^/trading/": { target: backend, changeOrigin: true },
     },
   },
 });
