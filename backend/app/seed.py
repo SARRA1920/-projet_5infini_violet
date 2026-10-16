@@ -42,6 +42,26 @@ ASSETS = [
     ("SHY", "iShares 1-3 Year Treasury Bond ETF", AssetType.BOND),
     ("LQD", "iShares iBoxx $ Inv Grade Corporate Bond ETF", AssetType.BOND),
     ("HYG", "iShares iBoxx $ High Yield Corporate Bond ETF", AssetType.BOND),
+    # Marchés internationaux : le plan gratuit Twelve Data ne couvre que les États-Unis,
+    # on passe donc par des ETF / ADR cotés à New York qui reflètent ces marchés (en USD).
+    # Europe
+    ("EWQ", "iShares MSCI France ETF (marché français)", AssetType.STOCK),
+    ("EWG", "iShares MSCI Germany ETF (marché allemand)", AssetType.STOCK),
+    ("EWU", "iShares MSCI United Kingdom ETF (marché britannique)", AssetType.STOCK),
+    ("EZU", "iShares MSCI Eurozone ETF (zone euro)", AssetType.STOCK),
+    ("ASML", "ASML Holding N.V. (Pays-Bas, ADR)", AssetType.STOCK),
+    ("SAP", "SAP SE (Allemagne, ADR)", AssetType.STOCK),
+    # Asie
+    ("EWJ", "iShares MSCI Japan ETF (marché japonais)", AssetType.STOCK),
+    ("FXI", "iShares China Large-Cap ETF (marché chinois)", AssetType.STOCK),
+    ("INDA", "iShares MSCI India ETF (marché indien)", AssetType.STOCK),
+    ("TSM", "Taiwan Semiconductor Manufacturing (Taïwan, ADR)", AssetType.STOCK),
+    # Marchés émergents et indices américains
+    ("EEM", "iShares MSCI Emerging Markets ETF (marchés émergents)", AssetType.STOCK),
+    ("EWZ", "iShares MSCI Brazil ETF (marché brésilien)", AssetType.STOCK),
+    ("SPY", "SPDR S&P 500 ETF (indice S&P 500)", AssetType.STOCK),
+    ("QQQ", "Invesco QQQ Trust (indice Nasdaq 100)", AssetType.STOCK),
+    ("DIA", "SPDR Dow Jones Industrial Average ETF (indice Dow Jones)", AssetType.STOCK),
 ]
 
 C, N = BankType.CONVENTIONAL, BankType.NON_CONVENTIONAL
