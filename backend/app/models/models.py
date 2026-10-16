@@ -141,6 +141,20 @@ class Transaction(Base):
     asset: Mapped["Asset"] = relationship()
 
 
+class CouponPayment(Base):
+    """Coupon obligataire versé : au plus un par position et par jour (contrainte unique)."""
+
+    __tablename__ = "coupon_payments"
+    __table_args__ = (UniqueConstraint("position_id", "paid_on", name="uq_coupon_position_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    portfolio_id: Mapped[int] = mapped_column(ForeignKey("portfolios.id", ondelete="CASCADE"))
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id", ondelete="CASCADE"))
+    paid_on: Mapped[date_type] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 # ---------- Banque synthétique (module Stress Testing) ----------
 class Bank(Base):
     __tablename__ = "banks"

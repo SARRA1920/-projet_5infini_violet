@@ -73,3 +73,7 @@
 .trade-page .data-table a {
   color: #8eb7ff;
 }
+
+.trade-tabs {
+  margin: 0.4rem 0 0.2rem;
+}

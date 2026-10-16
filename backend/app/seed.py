@@ -39,6 +39,9 @@ ASSETS = [
     ("XAU/USD", "Or / Dollar américain", AssetType.COMMODITY),
     ("USO", "United States Oil Fund (ETF pétrole brut WTI)", AssetType.COMMODITY),
     ("TLT", "iShares 20+ Year Treasury Bond ETF", AssetType.BOND),
+    ("SHY", "iShares 1-3 Year Treasury Bond ETF", AssetType.BOND),
+    ("LQD", "iShares iBoxx $ Inv Grade Corporate Bond ETF", AssetType.BOND),
+    ("HYG", "iShares iBoxx $ High Yield Corporate Bond ETF", AssetType.BOND),
     # Marchés internationaux : le plan gratuit Twelve Data ne couvre que les États-Unis,
     # on passe donc par des ETF / ADR cotés à New York qui reflètent ces marchés (en USD).
     # Europe
