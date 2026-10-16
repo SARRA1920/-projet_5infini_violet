@@ -1,8 +1,10 @@
-import traceback
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.services.quotes import live_quotes
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
 
@@ -12,5 +14,5 @@ def quotes():
     try:
         return live_quotes()
     except Exception as exc:
-        print(traceback.format_exc()) # <--- ADD THIS LINE
+        logger.exception("Lecture des cours impossible")
         raise HTTPException(status_code=502, detail="Cours indisponibles") from exc

@@ -138,19 +138,17 @@ export default function TradingPage() {
         <div className="panel-head">
           <div>
             <h2>Nouvel ordre</h2>
-            
+            <p>Stop loss et take profit sont enregistrés avec l'achat, sans exécution automatique.</p>
           </div>
         </div>
 
-        {/* --- NOUVEAU : Onglets des classes d'actifs --- */}
-        <div className="ranges" style={{ marginBottom: "20px", borderBottom: "1px solid #ccc" }}>
+        <div className="ranges trade-tabs">
           {ASSET_GROUPS.map((group) => (
             <button
               key={group.id}
               type="button"
               className={group.id === activeGroup ? "range active" : "range"}
               onClick={() => changeGroup(group.id)}
-              style={{ borderRadius: "0", borderBottom: group.id === activeGroup ? "2px solid #3b82f6" : "none" }}
             >
               {group.label}
             </button>

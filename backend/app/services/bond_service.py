@@ -1,45 +1,88 @@
-"""Simule le paiement des coupons (intérêts) pour les obligations détenues."""
-from decimal import Decimal
-from sqlalchemy import select
-from app.core.database import SessionLocal
-from app.models.models import Portfolio, Position, Asset, AssetType
+"""Simule le paiement quotidien des coupons (intérêts) sur les obligations détenues.
 
-# Simulation d'un rendement annuel de 4% sur les obligations.
-# 4% divisé par 365 jours = 0.01095% par jour.
+Règles :
+- rendement annuel simulé de 4 %, versé chaque jour sur la somme investie
+  (quantité x prix moyen d'achat) ;
+- un seul versement par position et par jour : la contrainte unique de coupon_payments
+  l'impose, donc relancer le script le même jour ne paie rien de plus ;
+- le portefeuille est verrouillé avant de toucher au cash (comme place_order), pour qu'un
+  achat simultané ne puisse pas écraser les intérêts ;
+- chaque versement est enregistré dans coupon_payments (date et montant).
+"""
+from datetime import date, datetime, timezone
+from decimal import Decimal
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from app.core.database import SessionLocal
+from app.models.models import Asset, AssetType, CouponPayment, Portfolio, Position
+
 ANNUAL_YIELD = Decimal("0.04")
 DAILY_YIELD = ANNUAL_YIELD / Decimal("365")
+CASH_STEP = Decimal("0.01")
 
-def pay_daily_bond_coupons():
-    """Ajoute des intérêts quotidiens aux portefeuilles contenant des obligations."""
-    db = SessionLocal()
-    try:
-        # 1. Trouver toutes les positions ouvertes sur des obligations
-        bond_positions = db.execute(
-            select(Position, Asset)
+
+def pay_daily_bond_coupons(today: date | None = None) -> tuple[int, Decimal]:
+    """Verse les coupons du jour. Retourne (nombre de positions payées, total versé)."""
+    today = today or datetime.now(timezone.utc).date()
+    paid_count = 0
+    total_paid = Decimal("0.00")
+
+    with SessionLocal() as db:
+        candidates = db.execute(
+            select(Position.id, Position.portfolio_id)
             .join(Asset, Position.asset_id == Asset.id)
-            .where(Position.is_open == True, Asset.asset_type == AssetType.BOND)
+            .where(Position.is_open.is_(True), Asset.asset_type == AssetType.BOND)
+            .order_by(Position.portfolio_id, Position.id)
         ).all()
 
-        paid_count = 0
-        total_paid = Decimal("0.00")
+        for position_id, portfolio_id in candidates:
+            try:
+                # Verrou du portefeuille avant de relire la position et le cash.
+                portfolio = db.scalar(
+                    select(Portfolio).where(Portfolio.id == portfolio_id).with_for_update()
+                )
+                position = db.get(Position, position_id)
+                if portfolio is None or position is None or not position.is_open:
+                    db.rollback()
+                    continue
 
-        for position, asset in bond_positions:
-            # 2. Calculer l'intérêt quotidien (Valeur investie * taux quotidien)
-            invested_amount = position.quantity * position.average_buy_price
-            daily_interest = (invested_amount * DAILY_YIELD).quantize(Decimal("0.01"))
+                already_paid = db.scalar(
+                    select(CouponPayment.id).where(
+                        CouponPayment.position_id == position_id,
+                        CouponPayment.paid_on == today,
+                    )
+                )
+                if already_paid is not None:
+                    db.rollback()
+                    continue
 
-            if daily_interest > 0:
-                # 3. Ajouter le cash au portefeuille de l'utilisateur
-                portfolio = db.scalar(select(Portfolio).where(Portfolio.id == position.portfolio_id))
-                if portfolio:
-                    portfolio.cash_balance += daily_interest
-                    paid_count += 1
-                    total_paid += daily_interest
+                invested = position.quantity * position.average_buy_price
+                interest = (invested * DAILY_YIELD).quantize(CASH_STEP)
+                if interest <= 0:
+                    db.rollback()
+                    continue
 
-        db.commit()
-        print(f"Succès ! Intérêts des obligations versés à {paid_count} portefeuilles. Total payé : ${total_paid}")
-    except Exception as e:
-        db.rollback()
-        print(f"Erreur lors du paiement des coupons : {e}")
-    finally:
-        db.close()
+                portfolio.cash_balance += interest
+                db.add(
+                    CouponPayment(
+                        portfolio_id=portfolio_id,
+                        position_id=position_id,
+                        paid_on=today,
+                        amount=interest,
+                    )
+                )
+                db.commit()  # libère le verrou
+            except IntegrityError:
+                # Un autre lancement a payé cette position entre-temps : rien à faire.
+                db.rollback()
+                continue
+            except Exception:
+                db.rollback()
+                raise
+
+            paid_count += 1
+            total_paid += interest
+
+    return paid_count, total_paid
