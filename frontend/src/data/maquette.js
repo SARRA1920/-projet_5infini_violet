@@ -79,6 +79,7 @@ export const quotes = [
 export const filters = [
   { id: "tous", label: "Tous" },
   { id: "actions", label: "Actions" },
+  { id: "obligations", label: "Obligations" },
   { id: "devises", label: "Devises" },
   { id: "matieres", label: "Matières premières" },
 ];

@@ -39,6 +39,9 @@ ASSETS = [
     ("XAU/USD", "Or / Dollar américain", AssetType.COMMODITY),
     ("USO", "United States Oil Fund (ETF pétrole brut WTI)", AssetType.COMMODITY),
     ("TLT", "iShares 20+ Year Treasury Bond ETF", AssetType.BOND),
+    ("SHY", "iShares 1-3 Year Treasury Bond ETF", AssetType.BOND),
+    ("LQD", "iShares iBoxx $ Inv Grade Corporate Bond ETF", AssetType.BOND),
+    ("HYG", "iShares iBoxx $ High Yield Corporate Bond ETF", AssetType.BOND),
 ]
 
 C, N = BankType.CONVENTIONAL, BankType.NON_CONVENTIONAL
