@@ -11,6 +11,16 @@ function Sparkline({ points, up }) {
   );
 }
 
+// Ordre d'affichage : actions, puis devises, puis matières premières ; ensuite par symbole.
+const GROUP_ORDER = { actions: 0, devises: 1, matieres: 2 };
+
+function compareRows(a, b) {
+  return (
+    (GROUP_ORDER[a.group] ?? 9) - (GROUP_ORDER[b.group] ?? 9) ||
+    a.symbol.localeCompare(b.symbol)
+  );
+}
+
 export default function MarketsPage() {
   const [params] = useSearchParams();
   const [group, setGroup] = useState("tous");
@@ -27,7 +37,12 @@ export default function MarketsPage() {
       })
       .then((rows) => {
         const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
-        setQuotes(maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row));
+        const maquetteSymbols = new Set(maquetteQuotes.map((row) => row.symbol));
+        // Les lignes de la maquette gardent leur place (remplacées par le vrai cours
+        // quand il existe), puis on ajoute tous les autres actifs de la base.
+        const merged = maquetteQuotes.map((row) => bySymbol.get(row.symbol) || row);
+        const others = rows.filter((row) => !maquetteSymbols.has(row.symbol));
+        setQuotes([...merged, ...others]);
         setLive(rows.length > 0);
       })
       .catch(() => setLive(false));
@@ -35,14 +50,16 @@ export default function MarketsPage() {
 
   const rows = useMemo(
     () =>
-      quotes.filter((row) => {
-        const matchesGroup = group === "tous" || row.group === group;
-        const matchesQuery =
-          !query ||
-          row.symbol.toLowerCase().includes(query) ||
-          row.name.toLowerCase().includes(query);
-        return matchesGroup && matchesQuery;
-      }),
+      quotes
+        .filter((row) => {
+          const matchesGroup = group === "tous" || row.group === group;
+          const matchesQuery =
+            !query ||
+            row.symbol.toLowerCase().includes(query) ||
+            row.name.toLowerCase().includes(query);
+          return matchesGroup && matchesQuery;
+        })
+        .sort(compareRows),
     [quotes, group, query],
   );
 

@@ -38,7 +38,7 @@ def _row(asset: Asset, history: list[PriceHistory]) -> dict:
         AssetType.STOCK: "actions",
         AssetType.FOREX: "devises",
         AssetType.COMMODITY: "matieres",
-        AssetType.BOND: "actions",
+        AssetType.BOND: "obligations",
     }[asset.asset_type]
     sign = "+" if change >= 0 else ""
     last = _french_number(latest.close, digits)
