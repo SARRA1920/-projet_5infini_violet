@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { allocation, performance, positions } from "../data/maquette.js";
+import { api } from "../services/api.js";
+import { formatDecimal, formatSigned, signClass } from "../services/format.js";
+import { performance } from "../data/maquette.js";
 
 function linePath(values) {
   const width = 640;
@@ -18,9 +20,62 @@ function linePath(values) {
   return { line, area };
 }
 
+const GROUPS = [
+  { id: "actions", label: "Actions", color: "#3dd68c" },
+  { id: "obligations", label: "Obligations", color: "#3b82f6" },
+  { id: "devises", label: "Devises", color: "#a78bfa" },
+  { id: "matieres", label: "Matières premières", color: "#fb923c" },
+  { id: "cash", label: "Liquidités", color: "#64748b" },
+];
+
+// Valeur totale lisible dans le beignet : 100139.78 -> "100,1K".
+function compact(value) {
+  const n = Number(value);
+  return n >= 1000 ? `${(n / 1000).toFixed(1).replace(".", ",")}K` : n.toFixed(0);
+}
+
+// Répartition réelle : valeur de chaque catégorie / valeur totale, en %.
+function buildAllocation(portfolio, quotes) {
+  if (!portfolio || Number(portfolio.total_value) <= 0) return [];
+  const total = Number(portfolio.total_value);
+  const groupOf = Object.fromEntries(quotes.map((row) => [row.symbol, row.group]));
+  const sums = { cash: Number(portfolio.cash) };
+  for (const position of portfolio.positions) {
+    const group = groupOf[position.symbol] || "actions";
+    sums[group] = (sums[group] || 0) + Number(position.market_value || 0);
+  }
+  return GROUPS.map((group) => ({
+    label: group.label,
+    color: group.color,
+    value: ((sums[group.id] || 0) / total) * 100,
+  })).filter((slice) => slice.value > 0);
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const [range, setRange] = useState("1M");
+  const [risk, setRisk] = useState(null);
+  const [portfolio, setPortfolio] = useState(null);
+  const [quotes, setQuotes] = useState([]);
+
+  // Chiffres réels du portefeuille ; en cas d'échec, les cartes affichent « — ».
+  useEffect(() => {
+    api("/trading/risk")
+      .then(setRisk)
+      .catch(() => setRisk(null));
+    api("/trading/portfolio")
+      .then(setPortfolio)
+      .catch(() => setPortfolio(null));
+    api("/quotes")
+      .then(setQuotes)
+      .catch(() => setQuotes([]));
+  }, []);
+
+  const allocation = buildAllocation(portfolio, quotes);
+  // Les 5 plus grosses positions (par valeur de marché).
+  const topPositions = [...(portfolio?.positions || [])]
+    .sort((a, b) => Number(b.market_value || 0) - Number(a.market_value || 0))
+    .slice(0, 5);
   const series = performance[range];
   const chart = linePath(series.values);
   const dateLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -59,23 +114,27 @@ export default function DashboardPage() {
       <div className="stat-grid">
         <article className="stat-card">
           <p>Valeur du portefeuille</p>
-          <strong>124 850,40 TND</strong>
-          <em className="up">+2,38 % aujourd'hui</em>
+          <strong>{risk ? formatDecimal(risk.total_value) : "—"}</strong>
+          <em>Capital de départ : {risk ? formatDecimal(risk.initial_capital) : "—"}</em>
         </article>
         <article className="stat-card">
-          <p>PNL du jour</p>
-          <strong className="up">+1 842,60 TND</strong>
-          <em className="up">+1,49 % aujourd'hui</em>
+          <p>Rendement total</p>
+          <strong className={risk ? signClass(risk.total_return_pct) : ""}>
+            {risk ? `${formatSigned(risk.total_return_pct)} %` : "—"}
+          </strong>
+          <em>Depuis le début</em>
         </article>
         <article className="stat-card">
-          <p>Risque (VaR 95 %)</p>
-          <strong>3 245,20 TND</strong>
-          <em className="down">-0,18 % aujourd'hui</em>
+          <p>Gain réalisé</p>
+          <strong className={risk ? signClass(risk.realized_pnl_total) : ""}>
+            {risk ? formatSigned(risk.realized_pnl_total) : "—"}
+          </strong>
+          <em>Sur les ventes déjà effectuées</em>
         </article>
         <article className="stat-card">
-          <p>Score de performance</p>
-          <strong>82 / 100</strong>
-          <em className="up">+4 pts aujourd'hui</em>
+          <p>Risque (VaR 95 %, 1 jour)</p>
+          <strong>{risk?.var_95_amount ? formatDecimal(risk.var_95_amount) : "—"}</strong>
+          <em>{risk?.var_95_pct ? `${formatDecimal(risk.var_95_pct)} % du portefeuille` : "Historique insuffisant"}</em>
         </article>
       </div>
 
@@ -125,16 +184,17 @@ export default function DashboardPage() {
           <div className="alloc">
             <div className="donut" style={{ background: `conic-gradient(${gradient})` }}>
               <div>
-                <strong>124,8K</strong>
-                <span>TND</span>
+                <strong>{portfolio ? compact(portfolio.total_value) : "—"}</strong>
+                <span>Total</span>
               </div>
             </div>
+            {allocation.length === 0 && <p>Répartition indisponible.</p>}
             <ul>
               {allocation.map((slice) => (
                 <li key={slice.label}>
                   <i style={{ background: slice.color }} />
                   {slice.label}
-                  <b>{slice.value} %</b>
+                  <b>{formatDecimal(slice.value.toFixed(1), 1)} %</b>
                 </li>
               ))}
             </ul>
@@ -146,7 +206,7 @@ export default function DashboardPage() {
         <div className="panel-head">
           <div>
             <h2>Positions principales</h2>
-            <p>Aperçu de la maquette</p>
+            <p>Vos plus grosses positions ouvertes</p>
           </div>
           <Link to="/portefeuille">Voir tout</Link>
         </div>
@@ -160,15 +220,24 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {positions.map((row) => (
+            {topPositions.length === 0 && (
+              <tr>
+                <td colSpan="4">Aucune position ouverte.</td>
+              </tr>
+            )}
+            {topPositions.map((row) => (
               <tr key={row.symbol}>
                 <td>
                   <strong>{row.symbol}</strong>
                   <span>{row.name}</span>
                 </td>
-                <td>{row.qty}</td>
-                <td>{row.price}</td>
-                <td className={row.up ? "up" : "down"}>{row.pnl}</td>
+                <td>{formatDecimal(row.quantity, 0)}</td>
+                <td>{formatDecimal(row.current_price)}</td>
+                <td className={signClass(row.unrealized_pnl_pct)}>
+                  {row.unrealized_pnl_pct === null || row.unrealized_pnl_pct === undefined
+                    ? "—"
+                    : `${formatSigned(row.unrealized_pnl_pct)} %`}
+                </td>
               </tr>
             ))}
           </tbody>
