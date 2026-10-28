@@ -22,6 +22,7 @@ class TransactionOut(BaseModel):
     price: Decimal
     stop_loss: Decimal | None
     take_profit: Decimal | None
+    realized_pnl: Decimal | None = None
     executed_at: datetime
 
 

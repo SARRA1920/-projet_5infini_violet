@@ -44,6 +44,7 @@ def _transaction_out(transaction: Transaction) -> TransactionOut:
         price=transaction.price,
         stop_loss=transaction.stop_loss,
         take_profit=transaction.take_profit,
+        realized_pnl=transaction.realized_pnl,
         executed_at=transaction.executed_at,
     )
 

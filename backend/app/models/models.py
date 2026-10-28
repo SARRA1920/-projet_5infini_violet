@@ -135,6 +135,9 @@ class Transaction(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     stop_loss: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
     take_profit: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    # Gain ou perte réalisé par une vente (vide pour un achat) :
+    # (prix de vente - prix moyen d'achat) x quantité
+    realized_pnl: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     executed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="transactions")
