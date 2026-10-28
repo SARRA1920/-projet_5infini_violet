@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 import { formatDecimal, formatSigned, signClass } from "../services/format.js";
-import { performance } from "../data/maquette.js";
 
 function linePath(values) {
+  if (values.length < 2) return { line: "", area: "" };
   const width = 640;
   const height = 180;
   const min = Math.min(...values);
@@ -19,6 +19,9 @@ function linePath(values) {
   const area = `${line} L${width},${height} L0,${height} Z`;
   return { line, area };
 }
+
+// Nombre de points de la courbe gardés pour chaque période (jours de Bourse + 1).
+const RANGES = { "1J": 2, "1S": 6, "1M": 22, "1A": Infinity };
 
 const GROUPS = [
   { id: "actions", label: "Actions", color: "#3dd68c" },
@@ -57,6 +60,7 @@ export default function DashboardPage() {
   const [risk, setRisk] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
   const [quotes, setQuotes] = useState([]);
+  const [curve, setCurve] = useState([]);
 
   // Chiffres réels du portefeuille ; en cas d'échec, les cartes affichent « — ».
   useEffect(() => {
@@ -66,18 +70,27 @@ export default function DashboardPage() {
     api("/trading/portfolio")
       .then(setPortfolio)
       .catch(() => setPortfolio(null));
+    api("/trading/performance")
+      .then(setCurve)
+      .catch(() => setCurve([]));
     api("/quotes")
       .then(setQuotes)
       .catch(() => setQuotes([]));
   }, []);
 
   const allocation = buildAllocation(portfolio, quotes);
+
+  // Courbe de la période choisie et sa variation (dernier point / premier point - 1).
+  const shown = RANGES[range] === Infinity ? curve : curve.slice(-RANGES[range]);
+  const chart = linePath(shown.map((point) => Number(point.value)));
+  const change =
+    shown.length >= 2 && Number(shown[0].value) > 0
+      ? ((Number(shown[shown.length - 1].value) / Number(shown[0].value) - 1) * 100).toFixed(2)
+      : null;
   // Les 5 plus grosses positions (par valeur de marché).
   const topPositions = [...(portfolio?.positions || [])]
     .sort((a, b) => Number(b.market_value || 0) - Number(a.market_value || 0))
     .slice(0, 5);
-  const series = performance[range];
-  const chart = linePath(series.values);
   const dateLabel = new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
     day: "numeric",
@@ -146,7 +159,7 @@ export default function DashboardPage() {
               <p>Évolution de la valeur totale</p>
             </div>
             <div className="ranges">
-              {Object.keys(performance).map((key) => (
+              {Object.keys(RANGES).map((key) => (
                 <button
                   key={key}
                   type="button"
@@ -159,8 +172,10 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="perf-line">
-            <span className="up">{series.label}</span>
-            <span>vs +3,15 % Tunindex</span>
+            <span className={change === null ? "" : signClass(change)}>
+              {change === null ? "—" : `${formatSigned(change)} %`}
+            </span>
+            <span>Composition actuelle appliquée à l'historique des prix</span>
           </p>
           <svg className="perf-chart" viewBox="0 0 640 180" role="img" aria-label="Courbe de performance">
             <defs>

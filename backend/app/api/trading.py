@@ -10,6 +10,7 @@ from app.models.models import Asset, Portfolio, Position, Transaction, Transacti
 from app.schemas.trading import (
     OrderPreviewOut,
     OrderRequest,
+    PerformancePoint,
     PortfolioOut,
     PositionOut,
     RiskOut,
@@ -23,6 +24,7 @@ from app.services.risk import (
     max_drawdown,
     order_warnings,
     portfolio_daily_returns,
+    value_curve,
 )
 from app.services.trading import (
     CASH_STEP,
@@ -189,6 +191,21 @@ def get_portfolio(
         total_value=portfolio.cash_balance + positions_value,
         valuation_complete=complete,
     )
+
+
+@router.get("/performance", response_model=list[PerformancePoint])
+def get_performance(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Courbe de valeur simulée : composition actuelle appliquée à l'historique des prix."""
+    portfolio = _user_portfolio(db, current_user)
+    total_value = get_portfolio(db=db, current_user=current_user).total_value
+    returns = portfolio_daily_returns(db, portfolio.id)
+    return [
+        PerformancePoint(date=day, value=_money(Decimal(str(value))))
+        for day, value in value_curve(returns, total_value)
+    ]
 
 
 @router.get("/risk", response_model=RiskOut)

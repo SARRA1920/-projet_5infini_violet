@@ -1,3 +1,4 @@
+from datetime import date as Date
 from datetime import datetime
 from decimal import Decimal
 
@@ -86,3 +87,10 @@ class OrderPreviewOut(BaseModel):
     asset_weight_pct: Decimal
     cash_weight_pct: Decimal
     warnings: list[str]
+
+
+class PerformancePoint(BaseModel):
+    """Valeur simulée du portefeuille actuel à une date donnée."""
+
+    date: Date
+    value: Decimal

@@ -183,3 +183,19 @@ def order_warnings(
             f"(maximum conseillé : {MAX_SINGLE_ASSET_WEIGHT * 100:.0f} %)."
         )
     return asset_weight, cash_weight, warnings
+
+
+def value_curve(returns: list[tuple[date, float]], total_value: Decimal) -> list[tuple[date, float]]:
+    """Valeur du portefeuille actuel jour par jour, en remontant le temps.
+
+    Le dernier point vaut la valeur d'aujourd'hui ; la valeur de la veille est
+    valeur du jour / (1 + rendement du jour). Courbe simulée : elle suppose que la
+    composition actuelle a été détenue sur toute la période.
+    """
+    value = float(total_value)
+    points: list[tuple[date, float]] = []
+    for day, daily in reversed(returns):
+        points.append((day, value))
+        value /= 1 + daily
+    points.reverse()
+    return points
