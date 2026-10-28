@@ -1,0 +1,53 @@
+.analysis-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.analysis-controls .trade-field {
+  min-width: 260px;
+}
+
+.legend {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0.6rem 0;
+  padding: 0;
+}
+
+.legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 0.4rem;
+}
+
+.analysis-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.analysis-chart .axis {
+  fill: #8a96ad;
+  font-size: 11px;
+}
+
+.analysis-chart .rsi-line {
+  stroke: #64748b;
+  stroke-dasharray: 4 4;
+}
+
+.analysis-chart .rsi-zone {
+  fill: rgba(142, 183, 255, 0.06);
+}
+
+.sub {
+  margin: 1rem 0 0.2rem;
+  font-size: 0.95rem;
+}

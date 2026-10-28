@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell.jsx";
 import GuestRoute from "./components/GuestRoute.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AnalysisPage from "./pages/AnalysisPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
@@ -43,16 +44,7 @@ export default function App() {
         <Route path="/marches" element={<MarketsPage />} />
         <Route path="/trading" element={<TradingPage />} />
         <Route path="/portefeuille" element={<PortfolioPage />} />
-        <Route
-          path="/analyse"
-          element={
-            <ModulePage
-              crumb="TradeLab / Analyse"
-              title="Analyse"
-              lead="Les indicateurs et graphiques avancés seront ajoutés avec le module d'analyse."
-            />
-          }
-        />
+        <Route path="/analyse" element={<AnalysisPage />} />
         <Route
           path="/ia"
           element={
