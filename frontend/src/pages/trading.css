@@ -83,3 +83,15 @@
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   margin: 0.9rem 0 0;
 }
+
+/* Simulation affichée sous le formulaire d'ordre. */
+.trade-page .order-preview {
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(142, 183, 255, 0.08);
+}
+
+.trade-page .order-preview p {
+  margin: 0.2rem 0;
+}

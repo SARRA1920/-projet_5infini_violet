@@ -69,3 +69,20 @@ class RiskOut(BaseModel):
     var_95_amount: Decimal | None
     max_drawdown_pct: Decimal | None
     max_drawdown_amount: Decimal | None
+
+
+class OrderPreviewOut(BaseModel):
+    """Effet d'un ordre sur le portefeuille, sans l'exécuter.
+
+    Les poids sont en points de pourcentage (34.6 pour 34,6 %).
+    """
+
+    symbol: str
+    side: TransactionSide
+    quantity: Decimal
+    price: Decimal
+    amount: Decimal
+    cash_after: Decimal
+    asset_weight_pct: Decimal
+    cash_weight_pct: Decimal
+    warnings: list[str]

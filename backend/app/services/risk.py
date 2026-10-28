@@ -21,6 +21,11 @@ from app.services.prices import PriceUnavailableError, get_current_price
 TRADING_DAYS_PER_YEAR = 252
 INITIAL_CASH = Decimal("100000.00")  # capital de départ d'un portefeuille (voir Portfolio.cash_balance)
 
+# Seuils des avertissements avant un ordre (modifiables ici, à un seul endroit).
+# Un avertissement n'empêche pas l'ordre : il informe l'utilisateur.
+MAX_SINGLE_ASSET_WEIGHT = Decimal("0.30")  # 30 % du portefeuille sur un seul actif
+MIN_CASH_WEIGHT = Decimal("0.05")  # 5 % du portefeuille gardés en liquidités
+
 
 def _closes_by_asset(db: Session, asset_ids: list[int]) -> dict[int, list[tuple[date, float]]]:
     """Cours de clôture de chaque actif, triés par date."""
@@ -133,3 +138,48 @@ def max_drawdown(returns: list[float]) -> float | None:
         peak = max(peak, value)
         worst = max(worst, 1 - value / peak)
     return worst
+
+
+def _fr(value: Decimal) -> str:
+    """Pourcentage avec une décimale et la virgule française (40.9 -> '40,9')."""
+    return f"{value:.1f}".replace(".", ",")
+
+
+def order_warnings(
+    is_buy: bool,
+    amount: Decimal,
+    cash: Decimal,
+    total_value: Decimal,
+    asset_value_before: Decimal,
+) -> tuple[Decimal, Decimal, list[str]]:
+    """Simule un ordre sans l'exécuter.
+
+    Renvoie (poids de l'actif après l'ordre, poids du cash après l'ordre, avertissements),
+    les poids étant des fractions du portefeuille (0.30 = 30 %). La valeur totale ne change
+    pas : un achat transforme du cash en actions, une vente fait l'inverse.
+    """
+    if is_buy:
+        cash_after = cash - amount
+        asset_after = asset_value_before + amount
+    else:
+        cash_after = cash + amount
+        asset_after = asset_value_before - amount
+    if total_value <= 0:
+        return Decimal("0"), Decimal("0"), []
+    asset_weight = asset_after / total_value
+    cash_weight = cash_after / total_value
+
+    warnings: list[str] = []
+    if is_buy and cash_after < 0:
+        warnings.append("Cash insuffisant : l'ordre sera refusé.")
+    elif is_buy and cash_weight < MIN_CASH_WEIGHT:
+        warnings.append(
+            f"Il ne vous resterait que {_fr(cash_weight * 100)} % de liquidités "
+            f"(minimum conseillé : {MIN_CASH_WEIGHT * 100:.0f} %)."
+        )
+    if is_buy and asset_weight > MAX_SINGLE_ASSET_WEIGHT:
+        warnings.append(
+            f"Cet actif représenterait {_fr(asset_weight * 100)} % du portefeuille "
+            f"(maximum conseillé : {MAX_SINGLE_ASSET_WEIGHT * 100:.0f} %)."
+        )
+    return asset_weight, cash_weight, warnings
