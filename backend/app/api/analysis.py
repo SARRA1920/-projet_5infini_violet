@@ -32,14 +32,21 @@ def technical_analysis(
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actif inconnu")
     rows = db.execute(
-        select(PriceHistory.date, PriceHistory.close)
+        select(
+            PriceHistory.date,
+            PriceHistory.open,
+            PriceHistory.high,
+            PriceHistory.low,
+            PriceHistory.close,
+            PriceHistory.volume,
+        )
         .where(PriceHistory.asset_id == asset.id)
         .order_by(PriceHistory.date)
     ).all()
     if len(rows) < 2:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pas d'historique de cours")
 
-    closes = [float(close) for _, close in rows]
+    closes = [float(row.close) for row in rows]
     short, long_, strength = sma(closes, SHORT_WINDOW), sma(closes, LONG_WINDOW), rsi(closes, RSI_PERIOD)
     start = max(0, len(rows) - days)
 
@@ -52,8 +59,12 @@ def technical_analysis(
         short_window=SHORT_WINDOW,
         long_window=LONG_WINDOW,
         rsi_period=RSI_PERIOD,
-        dates=[day for day, _ in rows[start:]],
+        dates=[row.date for row in rows[start:]],
+        open=[round(float(row.open), 4) for row in rows[start:]],
+        high=[round(float(row.high), 4) for row in rows[start:]],
+        low=[round(float(row.low), 4) for row in rows[start:]],
         close=cut(closes),
+        volume=[int(row.volume or 0) for row in rows[start:]],
         sma_short=cut(short),
         sma_long=cut(long_),
         rsi=cut(strength),

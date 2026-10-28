@@ -12,7 +12,11 @@ class TechnicalAnalysisOut(BaseModel):
     long_window: int
     rsi_period: int
     dates: list[Date]
+    open: list[float]
+    high: list[float]
+    low: list[float]
     close: list[float]
+    volume: list[int]
     sma_short: list[float | None]
     sma_long: list[float | None]
     rsi: list[float | None]

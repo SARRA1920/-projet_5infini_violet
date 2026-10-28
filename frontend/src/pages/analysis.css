@@ -51,3 +51,31 @@
   margin: 1rem 0 0.2rem;
   font-size: 0.95rem;
 }
+
+.candle-chart .chart-box {
+  width: 100%;
+}
+
+.candle-chart .ohlc {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.2rem 0 0.4rem;
+  font-size: 0.85rem;
+  color: #8a96ad;
+}
+
+.candle-chart .ohlc b {
+  color: #e6ecf7;
+  font-weight: 600;
+}
+
+.candle-chart .ohlc .up,
+.candle-chart .ohlc b.up {
+  color: #3dd68c;
+}
+
+.candle-chart .ohlc .down,
+.candle-chart .ohlc b.down {
+  color: #ff5d73;
+}
