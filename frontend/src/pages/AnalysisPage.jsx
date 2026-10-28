@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import BacktestPanel from "../components/BacktestPanel.jsx";
 import CandleChart from "../components/CandleChart.jsx";
 import { api } from "../services/api.js";
 import { formatDecimal } from "../services/format.js";
@@ -134,6 +135,7 @@ export default function AnalysisPage() {
         </div>
       </article>
       {content}
+      {symbol && <BacktestPanel symbol={symbol} />}
     </section>
   );
 }

@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.models import Asset, PriceHistory, User
-from app.schemas.analysis import TechnicalAnalysisOut
-from app.services.analysis import rsi, sma
+from app.schemas.analysis import BacktestOut, TechnicalAnalysisOut
+from app.services.analysis import backtest_crossover, rsi, sma
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -68,4 +68,51 @@ def technical_analysis(
         sma_short=cut(short),
         sma_long=cut(long_),
         rsi=cut(strength),
+    )
+
+
+@router.get("/{symbol}/backtest", response_model=BacktestOut)
+def backtest(
+    symbol: str,
+    short: int = Query(SHORT_WINDOW, ge=2, le=200, description="Moyenne mobile courte (jours)"),
+    long: int = Query(LONG_WINDOW, ge=3, le=400, description="Moyenne mobile longue (jours)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Rejoue sur tout l'historique : investi quand la moyenne courte dépasse la longue."""
+    if short >= long:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La moyenne courte doit être plus petite que la moyenne longue",
+        )
+    asset = db.scalar(select(Asset).where(Asset.symbol == symbol.strip().upper()))
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actif inconnu")
+    rows = db.execute(
+        select(PriceHistory.date, PriceHistory.close)
+        .where(PriceHistory.asset_id == asset.id)
+        .order_by(PriceHistory.date)
+    ).all()
+    result = backtest_crossover([float(close) for _, close in rows], short, long)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Historique insuffisant pour cette moyenne longue",
+        )
+    dates = [day for day, _ in rows][result["start_index"] :]
+    return BacktestOut(
+        symbol=asset.symbol,
+        name=asset.name,
+        short_window=short,
+        long_window=long,
+        initial_capital=10000.0,
+        dates=dates,
+        strategy=[round(v, 2) for v in result["strategy"]],
+        buy_hold=[round(v, 2) for v in result["buy_hold"]],
+        strategy_return_pct=round(result["strategy_return_pct"], 2),
+        buy_hold_return_pct=round(result["buy_hold_return_pct"], 2),
+        strategy_max_drawdown_pct=round(result["strategy_max_drawdown_pct"], 2),
+        buy_hold_max_drawdown_pct=round(result["buy_hold_max_drawdown_pct"], 2),
+        entries=result["entries"],
+        time_in_market_pct=round(result["time_in_market_pct"], 1),
     )

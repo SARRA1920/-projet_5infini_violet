@@ -79,3 +79,28 @@
 .candle-chart .ohlc b.down {
   color: #ff5d73;
 }
+
+.backtest-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.backtest-form .trade-field {
+  width: 190px;
+}
+
+.backtest-form .primary-btn {
+  justify-content: center;
+}
+
+.backtest-table {
+  margin-top: 1rem;
+}
+
+.backtest-note {
+  margin: 0.8rem 0 0;
+  color: #8a96ad;
+}
