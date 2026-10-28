@@ -1,14 +1,21 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.models import Asset, Portfolio, Position, Transaction, User
-from app.schemas.trading import OrderRequest, PortfolioOut, PositionOut, TransactionOut
+from app.schemas.trading import OrderRequest, PortfolioOut, PositionOut, RiskOut, TransactionOut
 from app.services.prices import PriceUnavailableError, get_current_price
+from app.services.risk import (
+    INITIAL_CASH,
+    annualized_volatility,
+    historical_var,
+    max_drawdown,
+    portfolio_daily_returns,
+)
 from app.services.trading import (
     CASH_STEP,
     InsufficientFundsError,
@@ -35,6 +42,13 @@ def _money(value: Decimal) -> Decimal:
     return value.quantize(CASH_STEP, rounding=ROUND_HALF_UP)
 
 
+def _pct(value: float | None) -> Decimal | None:
+    """Fraction -> pourcentage arrondi à 2 décimales (0.0184 -> 1.84)."""
+    if value is None:
+        return None
+    return _money(Decimal(str(value * 100)))
+
+
 def _transaction_out(transaction: Transaction) -> TransactionOut:
     return TransactionOut(
         id=transaction.id,
@@ -44,6 +58,7 @@ def _transaction_out(transaction: Transaction) -> TransactionOut:
         price=transaction.price,
         stop_loss=transaction.stop_loss,
         take_profit=transaction.take_profit,
+        realized_pnl=transaction.realized_pnl,
         executed_at=transaction.executed_at,
     )
 
@@ -128,6 +143,37 @@ def get_portfolio(
         positions_value=positions_value,
         total_value=portfolio.cash_balance + positions_value,
         valuation_complete=complete,
+    )
+
+
+@router.get("/risk", response_model=RiskOut)
+def get_risk(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Performance et indicateurs de risque du portefeuille de l'utilisateur connecté."""
+    portfolio = _user_portfolio(db, current_user)
+    total_value = get_portfolio(db=db, current_user=current_user).total_value
+    returns = [daily for _, daily in portfolio_daily_returns(db, portfolio.id)]
+    volatility = annualized_volatility(returns)
+    var_95 = historical_var(returns, 0.95)
+    drawdown = max_drawdown(returns)
+    realized = db.scalar(
+        select(func.coalesce(func.sum(Transaction.realized_pnl), 0)).where(
+            Transaction.portfolio_id == portfolio.id
+        )
+    )
+    return RiskOut(
+        total_value=total_value,
+        initial_capital=INITIAL_CASH,
+        total_return_pct=_money((total_value / INITIAL_CASH - 1) * 100),
+        realized_pnl_total=_money(Decimal(realized)),
+        days_used=len(returns),
+        volatility_pct=_pct(volatility),
+        var_95_pct=_pct(var_95),
+        var_95_amount=None if var_95 is None else _money(Decimal(str(var_95)) * total_value),
+        max_drawdown_pct=_pct(drawdown),
+        max_drawdown_amount=None if drawdown is None else _money(Decimal(str(drawdown)) * total_value),
     )
 
 

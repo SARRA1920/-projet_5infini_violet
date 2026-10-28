@@ -22,6 +22,7 @@ class TransactionOut(BaseModel):
     price: Decimal
     stop_loss: Decimal | None
     take_profit: Decimal | None
+    realized_pnl: Decimal | None = None
     executed_at: datetime
 
 
@@ -49,3 +50,22 @@ class PortfolioOut(BaseModel):
     positions_value: Decimal
     total_value: Decimal
     valuation_complete: bool  # False si au moins une position n'a pas de cours
+
+
+class RiskOut(BaseModel):
+    """Performance et risque du portefeuille actuel (simulation historique).
+
+    Les pourcentages sont en points de pourcentage (1.84 pour 1,84 %). Les champs de
+    risque valent null si l'historique est insuffisant.
+    """
+
+    total_value: Decimal
+    initial_capital: Decimal
+    total_return_pct: Decimal
+    realized_pnl_total: Decimal
+    days_used: int
+    volatility_pct: Decimal | None
+    var_95_pct: Decimal | None
+    var_95_amount: Decimal | None
+    max_drawdown_pct: Decimal | None
+    max_drawdown_amount: Decimal | None
