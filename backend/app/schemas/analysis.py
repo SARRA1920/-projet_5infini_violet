@@ -22,20 +22,26 @@ class TechnicalAnalysisOut(BaseModel):
     rsi: list[float | None]
 
 
-class BacktestOut(BaseModel):
-    """Résultat du rejeu d'une stratégie de croisement de moyennes mobiles."""
+class StrategyResult(BaseModel):
+    key: str
+    label: str
+    curve: list[float]
+    return_pct: float
+    max_drawdown_pct: float
+    entries: int
+    time_in_market_pct: float
+    return_to_risk: float | None
+
+
+class CompareOut(BaseModel):
+    """Plusieurs stratégies rejouées sur le même actif, même départ, même capital."""
 
     symbol: str
     name: str
     short_window: int
     long_window: int
+    trend_window: int
+    rsi_period: int
     initial_capital: float
     dates: list[Date]
-    strategy: list[float]
-    buy_hold: list[float]
-    strategy_return_pct: float
-    buy_hold_return_pct: float
-    strategy_max_drawdown_pct: float
-    buy_hold_max_drawdown_pct: float
-    entries: int
-    time_in_market_pct: float
+    strategies: list[StrategyResult]

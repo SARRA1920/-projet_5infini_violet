@@ -5,14 +5,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.models import Asset, PriceHistory, User
-from app.schemas.analysis import BacktestOut, TechnicalAnalysisOut
-from app.services.analysis import backtest_crossover, rsi, sma
+from app.schemas.analysis import CompareOut, StrategyResult, TechnicalAnalysisOut
+from app.services.analysis import crossover_signal, rsi, rsi_signal, sma, simulate, trend_signal
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 SHORT_WINDOW = 20
 LONG_WINDOW = 50
 RSI_PERIOD = 14
+TREND_WINDOW = 50
 
 
 @router.get("/{symbol}", response_model=TechnicalAnalysisOut)
@@ -71,15 +72,15 @@ def technical_analysis(
     )
 
 
-@router.get("/{symbol}/backtest", response_model=BacktestOut)
-def backtest(
+@router.get("/{symbol}/compare", response_model=CompareOut)
+def compare_strategies(
     symbol: str,
     short: int = Query(SHORT_WINDOW, ge=2, le=200, description="Moyenne mobile courte (jours)"),
     long: int = Query(LONG_WINDOW, ge=3, le=400, description="Moyenne mobile longue (jours)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Rejoue sur tout l'historique : investi quand la moyenne courte dépasse la longue."""
+    """Compare quatre stratégies sur tout l'historique de l'actif, avec le même départ."""
     if short >= long:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -93,26 +94,45 @@ def backtest(
         .where(PriceHistory.asset_id == asset.id)
         .order_by(PriceHistory.date)
     ).all()
-    result = backtest_crossover([float(close) for _, close in rows], short, long)
-    if result is None:
+    closes = [float(close) for _, close in rows]
+
+    # Même premier jour pour toutes : quand la moyenne la plus longue existe.
+    start = max(long, TREND_WINDOW, RSI_PERIOD + 1) - 1
+    if len(closes) < start + 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Historique insuffisant pour cette moyenne longue",
         )
-    dates = [day for day, _ in rows][result["start_index"] :]
-    return BacktestOut(
+
+    definitions = [
+        ("hold", "Acheter et garder", [True] * len(closes)),
+        ("crossover", f"Croisement MM {short} / {long}", crossover_signal(closes, short, long)),
+        ("trend", f"Tendance (cours > MM {TREND_WINDOW})", trend_signal(closes, TREND_WINDOW)),
+        ("rsi", f"RSI ({RSI_PERIOD} j) : achat < 30, vente > 70", rsi_signal(closes, RSI_PERIOD)),
+    ]
+    strategies = []
+    for key, label, signal in definitions:
+        out = simulate(closes, signal, start)
+        strategies.append(
+            StrategyResult(
+                key=key,
+                label=label,
+                curve=[round(v, 2) for v in out["curve"]],
+                return_pct=round(out["return_pct"], 2),
+                max_drawdown_pct=round(out["max_drawdown_pct"], 2),
+                entries=out["entries"],
+                time_in_market_pct=round(out["time_in_market_pct"], 1),
+                return_to_risk=None if out["return_to_risk"] is None else round(out["return_to_risk"], 2),
+            )
+        )
+    return CompareOut(
         symbol=asset.symbol,
         name=asset.name,
         short_window=short,
         long_window=long,
+        trend_window=TREND_WINDOW,
+        rsi_period=RSI_PERIOD,
         initial_capital=10000.0,
-        dates=dates,
-        strategy=[round(v, 2) for v in result["strategy"]],
-        buy_hold=[round(v, 2) for v in result["buy_hold"]],
-        strategy_return_pct=round(result["strategy_return_pct"], 2),
-        buy_hold_return_pct=round(result["buy_hold_return_pct"], 2),
-        strategy_max_drawdown_pct=round(result["strategy_max_drawdown_pct"], 2),
-        buy_hold_max_drawdown_pct=round(result["buy_hold_max_drawdown_pct"], 2),
-        entries=result["entries"],
-        time_in_market_pct=round(result["time_in_market_pct"], 1),
+        dates=[day for day, _ in rows][start:],
+        strategies=strategies,
     )

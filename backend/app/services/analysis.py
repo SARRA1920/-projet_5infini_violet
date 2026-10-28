@@ -54,48 +54,63 @@ def _max_drawdown(curve: list[float]) -> float:
     return worst * 100
 
 
-def backtest_crossover(
-    closes: list[float], short_window: int, long_window: int, capital: float = 10000.0
-) -> dict | None:
-    """Rejoue la stratégie « croisement de moyennes mobiles » sur le passé.
+# ---- Signaux : True = investi, False = en liquidités, None = indicateur pas encore défini.
+# Le signal observé à la clôture du jour i s'applique au rendement du jour i + 1.
 
-    Règle : on est investi tant que la moyenne courte est au-dessus de la longue, sinon
-    on est en liquidités. Le signal observé à la clôture d'un jour s'applique à partir
-    de ce jour (achat ou vente au cours de clôture). Aucun frais n'est compté.
 
-    Renvoie None s'il n'y a pas assez de cours pour calculer la moyenne longue.
-    La courbe commence le premier jour où les deux moyennes existent ; la comparaison
-    « acheter et garder » part du même jour avec le même capital.
+def crossover_signal(closes: list[float], short_window: int, long_window: int) -> list[bool | None]:
+    """Investi quand la moyenne courte est au-dessus de la moyenne longue."""
+    short, long_ = sma(closes, short_window), sma(closes, long_window)
+    return [None if a is None or b is None else a > b for a, b in zip(short, long_)]
+
+
+def trend_signal(closes: list[float], window: int) -> list[bool | None]:
+    """Investi quand le cours est au-dessus de sa moyenne mobile."""
+    return [None if avg is None else close > avg for close, avg in zip(closes, sma(closes, window))]
+
+
+def rsi_signal(closes: list[float], period: int = 14, low: float = 30, high: float = 70) -> list[bool | None]:
+    """On achète quand le RSI passe sous `low` (survendu), on vend au-dessus de `high`."""
+    invested = False
+    result: list[bool | None] = []
+    for value in rsi(closes, period):
+        if value is None:
+            result.append(None)
+            continue
+        if value < low:
+            invested = True
+        elif value > high:
+            invested = False
+        result.append(invested)
+    return result
+
+
+def simulate(closes: list[float], signal: list[bool | None], start: int, capital: float = 10000.0) -> dict:
+    """Rejoue un signal à partir du jour `start` (même départ pour toutes les stratégies).
+
+    Achat ou vente au cours de clôture, sans frais. Renvoie la courbe de capital
+    (une valeur par jour à partir de `start`) et ses indicateurs.
     """
-    short = sma(closes, short_window)
-    long_ = sma(closes, long_window)
-    start = long_window - 1
-    if len(closes) < start + 2:
-        return None
-
-    strategy = [capital]
-    buy_hold = [capital]
+    curve = [capital]
     invested = False
     entries = 0
     days_invested = 0
     for i in range(start + 1, len(closes)):
-        was_invested = short[i - 1] > long_[i - 1]
-        if was_invested and not invested:
+        now_invested = bool(signal[i - 1])
+        if now_invested and not invested:
             entries += 1
-        invested = was_invested
-        daily = closes[i] / closes[i - 1]
-        strategy.append(strategy[-1] * (daily if invested else 1.0))
-        buy_hold.append(capital * closes[i] / closes[start])
+        invested = now_invested
+        curve.append(curve[-1] * (closes[i] / closes[i - 1] if invested else 1.0))
         days_invested += 1 if invested else 0
 
+    drawdown = _max_drawdown(curve)
+    total_return = (curve[-1] / capital - 1) * 100
+    days = max(len(curve) - 1, 1)
     return {
-        "start_index": start,
-        "strategy": strategy,
-        "buy_hold": buy_hold,
-        "strategy_return_pct": (strategy[-1] / capital - 1) * 100,
-        "buy_hold_return_pct": (buy_hold[-1] / capital - 1) * 100,
-        "strategy_max_drawdown_pct": _max_drawdown(strategy),
-        "buy_hold_max_drawdown_pct": _max_drawdown(buy_hold),
+        "curve": curve,
+        "return_pct": total_return,
+        "max_drawdown_pct": drawdown,
         "entries": entries,
-        "time_in_market_pct": days_invested / (len(strategy) - 1) * 100,
+        "time_in_market_pct": days_invested / days * 100,
+        "return_to_risk": total_return / drawdown if drawdown > 0 else None,
     }
