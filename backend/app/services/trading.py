@@ -93,6 +93,7 @@ def place_order(
         )
     )
     amount = _round(quantity * price, CASH_STEP)
+    realized_pnl: Decimal | None = None  # rempli seulement pour une vente
 
     # 4. Contrôles métier, puis seulement ensuite les modifications
     if side == TransactionSide.BUY:
@@ -129,6 +130,8 @@ def place_order(
                 f"Position insuffisante sur {asset.symbol} : {held} détenu, {quantity} demandé"
             )
         portfolio.cash_balance += amount
+        # Gain ou perte réalisé = (prix de vente - prix moyen d'achat) x quantité
+        realized_pnl = _round((price - position.average_buy_price) * quantity, CASH_STEP)
         position.quantity -= quantity
         if position.quantity == 0:
             position.is_open = False
@@ -142,6 +145,7 @@ def place_order(
         price=price,
         stop_loss=_round(stop_loss, PRICE_STEP) if stop_loss is not None else None,
         take_profit=_round(take_profit, PRICE_STEP) if take_profit is not None else None,
+        realized_pnl=realized_pnl,
     )
     db.add(transaction)
     db.flush()  # attribue transaction.id ; rien n'est validé tant que l'appelant ne commit pas
