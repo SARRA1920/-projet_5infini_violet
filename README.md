@@ -10,7 +10,7 @@ Ce README explique comment installer et lancer le projet sur une machine
 avec Docker, puis comment contribuer sans perturber le travail des
 autres membres.
 
-> Rédigé par Emna --- rôle : gestion de projet et documentation.
+
 
 ------------------------------------------------------------------------
 
