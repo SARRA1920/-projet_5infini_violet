@@ -34,6 +34,7 @@ export default function TradingPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [preview, setPreview] = useState(null);
 
   function loadPortfolio() {
     return api("/trading/portfolio")
@@ -52,6 +53,32 @@ export default function TradingPage() {
       .catch((err) => setNotice(`Cours indisponibles : ${err.message}`));
     loadPortfolio();
   }, []);
+
+  // Simulation de l'ordre : recalculée 0,4 s après la dernière modification.
+  useEffect(() => {
+    const qty = decimalText(quantity);
+    if (!symbol || !qty || !(Number(qty) > 0)) {
+      setPreview(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api("/trading/orders/preview", {
+        method: "POST",
+        body: JSON.stringify({ symbol, side, quantity: qty }),
+      })
+        .then((data) => {
+          if (!cancelled) setPreview(data);
+        })
+        .catch(() => {
+          if (!cancelled) setPreview(null); // l'erreur réelle s'affichera à l'envoi
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [symbol, side, quantity, portfolio]);
 
   // Quand on change d'onglet, on met à jour le symbole sélectionné
   function changeGroup(group_id) {
@@ -218,6 +245,24 @@ export default function TradingPage() {
             {pending ? "Envoi..." : side === "buy" ? "Acheter" : "Vendre"}
           </button>
         </form>
+        {preview && (
+          <div className="order-preview">
+            <p>
+              Montant de l'ordre : <strong>{formatDecimal(preview.amount)}</strong> · Cash après :{" "}
+              <strong>{formatDecimal(preview.cash_after)}</strong>
+            </p>
+            <p>
+              Poids de {preview.symbol} après l'ordre :{" "}
+              <strong>{formatDecimal(preview.asset_weight_pct)} %</strong> · Part de cash :{" "}
+              <strong>{formatDecimal(preview.cash_weight_pct)} %</strong>
+            </p>
+            {preview.warnings.map((text) => (
+              <p key={text} className="trade-warning">
+                ⚠ {text}
+              </p>
+            ))}
+          </div>
+        )}
         {error && <p className="trade-error">{error}</p>}
         {result && (
           <p className="trade-ok">

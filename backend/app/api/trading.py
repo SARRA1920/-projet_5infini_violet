@@ -6,14 +6,22 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.models import Asset, Portfolio, Position, Transaction, User
-from app.schemas.trading import OrderRequest, PortfolioOut, PositionOut, RiskOut, TransactionOut
+from app.models.models import Asset, Portfolio, Position, Transaction, TransactionSide, User
+from app.schemas.trading import (
+    OrderPreviewOut,
+    OrderRequest,
+    PortfolioOut,
+    PositionOut,
+    RiskOut,
+    TransactionOut,
+)
 from app.services.prices import PriceUnavailableError, get_current_price
 from app.services.risk import (
     INITIAL_CASH,
     annualized_volatility,
     historical_var,
     max_drawdown,
+    order_warnings,
     portfolio_daily_returns,
 )
 from app.services.trading import (
@@ -90,6 +98,43 @@ def create_order(
     db.commit()
     db.refresh(transaction)
     return _transaction_out(transaction)
+
+
+@router.post("/orders/preview", response_model=OrderPreviewOut)
+def preview_order(
+    body: OrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Simule un ordre (rien n'est enregistré) et signale les risques éventuels."""
+    try:
+        price = get_current_price(db, body.symbol).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    except PriceUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    snapshot = get_portfolio(db=db, current_user=current_user)
+    symbol = body.symbol.strip().upper()
+    value_before = next(
+        (p.market_value or Decimal("0") for p in snapshot.positions if p.symbol == symbol),
+        Decimal("0"),
+    )
+    amount = _money(body.quantity * price)
+    is_buy = body.side == TransactionSide.BUY
+    asset_weight, cash_weight, warnings = order_warnings(
+        is_buy, amount, snapshot.cash, snapshot.total_value, value_before
+    )
+    if not snapshot.valuation_complete:
+        warnings.append("Certaines positions n'ont pas de cours : les pourcentages sont approximatifs.")
+    return OrderPreviewOut(
+        symbol=symbol,
+        side=body.side,
+        quantity=body.quantity,
+        price=price,
+        amount=amount,
+        cash_after=snapshot.cash - amount if is_buy else snapshot.cash + amount,
+        asset_weight_pct=_money(asset_weight * 100),
+        cash_weight_pct=_money(cash_weight * 100),
+        warnings=warnings,
+    )
 
 
 @router.get("/portfolio", response_model=PortfolioOut)
