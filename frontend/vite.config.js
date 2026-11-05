@@ -17,6 +17,7 @@ export default defineConfig({
       "/auth": { target: backend, changeOrigin: true },
       "/quotes": { target: backend, changeOrigin: true },
       "^/trading/": { target: backend, changeOrigin: true },
+      "^/admin/": { target: backend, changeOrigin: true },
     },
   },
 });

@@ -1,0 +1,133 @@
+.status {
+  color: #b7c3d4;
+}
+
+.admin {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-nav a {
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  color: #b7c3d4;
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+.admin-nav a.active,
+.admin-nav a:hover {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.admin-note {
+  margin: 0 0 0.8rem;
+  color: #8eb7ff;
+  font-size: 0.85rem;
+}
+
+.admin-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.admin-tools input,
+.admin-tools select,
+.admin-form input,
+.admin-form select {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: #0d1526;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.admin-tools button,
+.mini-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-form {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 460px;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.3rem;
+  color: #c5d0de;
+  font-size: 0.88rem;
+}
+
+.bars {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  gap: 0.5rem;
+  align-items: center;
+  color: #c5d0de;
+  font-size: 0.85rem;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 99px;
+  background: #0d1526;
+}
+
+.bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: #3b82f6;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 0.8rem;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 99px;
+  background: rgba(61, 214, 140, 0.15);
+  color: #3dd68c;
+  font-size: 0.75rem;
+}
+
+.tag.off {
+  background: rgba(255, 93, 115, 0.15);
+  color: #ff5d73;
+}
+
+@media (max-width: 900px) {
+  .admin,
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
