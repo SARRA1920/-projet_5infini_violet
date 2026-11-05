@@ -77,3 +77,9 @@
 .trade-tabs {
   margin: 0.4rem 0 0.2rem;
 }
+
+/* Bloc Performance et risque : 5 cartes qui se répartissent selon la largeur. */
+.trade-page .risk-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin: 0.9rem 0 0;
+}
