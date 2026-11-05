@@ -108,6 +108,9 @@ def place_order(
                 quantity=quantity,
                 average_buy_price=price,
                 is_open=True,
+                # --- NEW: write SL/TP to the position ---
+                stop_loss=_round(stop_loss, PRICE_STEP) if stop_loss is not None else None,
+                take_profit=_round(take_profit, PRICE_STEP) if take_profit is not None else None,
             )
             db.add(position)
         else:
@@ -122,6 +125,11 @@ def place_order(
                 position.is_open = True
                 position.opened_at = func.now()
                 position.closed_at = None
+            # --- NEW: update SL/TP if new values are provided ---
+            if stop_loss is not None:
+                position.stop_loss = _round(stop_loss, PRICE_STEP)
+            if take_profit is not None:
+                position.take_profit = _round(take_profit, PRICE_STEP)
     else:
         if position is None or not position.is_open or quantity > position.quantity:
             held = position.quantity if position is not None and position.is_open else 0
@@ -133,6 +141,9 @@ def place_order(
         if position.quantity == 0:
             position.is_open = False
             position.closed_at = func.now()
+            # --- NEW: clear SL/TP when position is closed ---
+            position.stop_loss = None
+            position.take_profit = None
 
     transaction = Transaction(
         portfolio_id=portfolio.id,
