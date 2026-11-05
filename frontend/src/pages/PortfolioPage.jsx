@@ -132,12 +132,14 @@ export default function PortfolioPage() {
                 <th>Valeur</th>
                 <th>+/- latent</th>
                 <th>+/- %</th>
+                <th>Stop loss</th>
+                <th>Take profit</th>
               </tr>
             </thead>
             <tbody>
               {portfolio && positions.length === 0 && (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="9">
                     Aucune position ouverte. <Link to="/trading">Passez un premier ordre</Link>.
                   </td>
                 </tr>
@@ -158,6 +160,8 @@ export default function PortfolioPage() {
                   <td className={signClass(row.unrealized_pnl_pct)}>
                     {row.unrealized_pnl_pct === null ? "—" : `${formatSigned(row.unrealized_pnl_pct)} %`}
                   </td>
+                  <td>{row.stop_loss ? formatDecimal(row.stop_loss) : "—"}</td>
+                  <td>{row.take_profit ? formatDecimal(row.take_profit) : "—"}</td>
                 </tr>
               ))}
             </tbody>

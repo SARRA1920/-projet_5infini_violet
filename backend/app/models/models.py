@@ -119,6 +119,10 @@ class Position(Base):
     opened_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # --- NEW: SL/TP for automatic execution ---
+    stop_loss: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    take_profit: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+
     portfolio: Mapped["Portfolio"] = relationship(back_populates="positions")
     asset: Mapped["Asset"] = relationship()
 
