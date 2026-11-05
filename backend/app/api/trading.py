@@ -164,6 +164,8 @@ def get_portfolio(
             market_value=None,
             unrealized_pnl=None,
             unrealized_pnl_pct=None,
+            stop_loss=position.stop_loss,
+            take_profit=position.take_profit,
         )
         try:
             price = get_current_price(db, asset.symbol)
