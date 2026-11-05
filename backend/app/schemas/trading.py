@@ -33,16 +33,18 @@ class PositionOut(BaseModel):
     Si le cours est indisponible, les champs de valorisation valent null
     et price_error explique pourquoi.
     """
-
     symbol: str
     name: str
     quantity: Decimal
     average_buy_price: Decimal
-    current_price: Decimal | None
-    market_value: Decimal | None
-    unrealized_pnl: Decimal | None
-    unrealized_pnl_pct: Decimal | None
+    current_price: Decimal | None = None
+    market_value: Decimal | None = None
+    unrealized_pnl: Decimal | None = None
+    unrealized_pnl_pct: Decimal | None = None
     price_error: str | None = None
+   
+    stop_loss: Decimal | None = None
+    take_profit: Decimal | None = None
 
 
 class PortfolioOut(BaseModel):
