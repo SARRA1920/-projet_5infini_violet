@@ -57,6 +57,8 @@ class User(Base):
     level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     placement_score: Mapped[int | None] = mapped_column(nullable=True)
     placement_done_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Formation : date à laquelle le guide d'accueil a été terminé ou passé (une seule fois)
+    guide_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     portfolios: Mapped[list["Portfolio"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

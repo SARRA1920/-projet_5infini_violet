@@ -17,6 +17,15 @@ class PlacementSubmission(BaseModel):
     answers: dict[int, int]
 
 
+@router.post("/guide/seen")
+def mark_guide_seen(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Marque le guide d'accueil comme vu (terminé ou passé). Sans effet si déjà fait."""
+    if user.guide_seen_at is None:
+        user.guide_seen_at = datetime.utcnow()
+        db.commit()
+    return {"guide_seen_at": user.guide_seen_at}
+
+
 @router.get("/placement")
 def get_placement(user: User = Depends(get_current_user)):
     """Glossaire et questions du QCM (sans les réponses)."""

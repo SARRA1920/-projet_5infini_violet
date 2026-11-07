@@ -66,7 +66,7 @@ export default function PlacementPage() {
   useEffect(() => {
     api("/formation/placement")
       .then((data) => {
-        if (data.already_done) navigate("/formation", { replace: true });
+        if (data.already_done) navigate("/accueil", { replace: true });
         else setQuiz(data);
       })
       .catch((err) => setError(err.message));
@@ -280,8 +280,8 @@ export default function PlacementPage() {
           </details>
 
           <div className="pl-actions end">
-            <button className="pl-btn primary big" onClick={() => navigate("/formation", { replace: true })}>
-              Entrer dans la formation
+            <button className="pl-btn primary big" onClick={() => navigate("/accueil", { replace: true })}>
+              Découvrir la plateforme
             </button>
           </div>
         </section>
