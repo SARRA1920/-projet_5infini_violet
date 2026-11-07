@@ -15,6 +15,7 @@ import {
   AdminUsers,
 } from "./pages/admin/AdminPages.jsx";
 import AnalysisPage from "./pages/AnalysisPage.jsx";
+import PlacementPage from "./pages/PlacementPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
@@ -51,6 +52,14 @@ export default function App() {
         }
       />
       <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/formation/niveau"
+        element={
+          <ProtectedRoute>
+            <PlacementPage />
+          </ProtectedRoute>
+        }
+      />
       <Route element={<PrivateShell />}>
         <Route path="/accueil" element={<DashboardPage />} />
         <Route path="/marches" element={<MarketsPage />} />

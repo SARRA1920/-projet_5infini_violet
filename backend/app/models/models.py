@@ -53,6 +53,10 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # Formation : niveau issu du QCM d'entrée (debutant / intermediaire / pro)
+    level: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    placement_score: Mapped[int | None] = mapped_column(nullable=True)
+    placement_done_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     portfolios: Mapped[list["Portfolio"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

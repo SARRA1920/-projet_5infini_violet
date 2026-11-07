@@ -149,7 +149,8 @@ export default function AppShell() {
   }
 
   const initials = (user?.username || "?").slice(0, 2).toUpperCase();
-  const roleLabel = user?.role === "admin" ? "Admin" : "Trader Pro";
+  const LEVEL_LABELS = { debutant: "Trader Débutant", intermediaire: "Trader Intermédiaire", pro: "Trader Pro" };
+  const roleLabel = user?.role === "admin" ? "Admin" : LEVEL_LABELS[user?.level] || "Trader";
   const groups = NAV.map((group) => ({
     ...group,
     items: group.items.filter((item) => item.to !== "/administration" || user?.role === "admin"),

@@ -23,6 +23,7 @@ class UserPublic(BaseModel):
     email: str
     username: str
     role: UserRole
+    level: str | None = None
 
 
 class TokenResponse(BaseModel):
