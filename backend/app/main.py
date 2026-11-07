@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin import router as admin_router
 from app.api.analysis import router as analysis_router
 from app.api.auth import router as auth_router
+from app.api.formation import router as formation_router
 from app.api.quotes import router as quotes_router
 from app.api.trading import router as trading_router
 
@@ -22,6 +23,7 @@ app.include_router(analysis_router)
 app.include_router(quotes_router)
 app.include_router(trading_router)
 app.include_router(admin_router)
+app.include_router(formation_router)
 
 
 @app.get("/health")
