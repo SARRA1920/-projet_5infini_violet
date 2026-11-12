@@ -20,6 +20,7 @@ import RoomPage from "./pages/RoomPage.jsx";
 import RoomsPage from "./pages/RoomsPage.jsx";
 import PlacementPage from "./pages/PlacementPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
 import ModulePage from "./pages/ModulePage.jsx";
@@ -52,6 +53,14 @@ export default function App() {
         element={
           <GuestRoute>
             <RegisterPage />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/mot-de-passe-oublie"
+        element={
+          <GuestRoute>
+            <ForgotPasswordPage />
           </GuestRoute>
         }
       />
