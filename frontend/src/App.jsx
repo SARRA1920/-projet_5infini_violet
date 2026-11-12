@@ -15,6 +15,7 @@ import {
   AdminUsers,
 } from "./pages/admin/AdminPages.jsx";
 import AnalysisPage from "./pages/AnalysisPage.jsx";
+import ClassementPage from "./pages/ClassementPage.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
 import RoomsPage from "./pages/RoomsPage.jsx";
 import PlacementPage from "./pages/PlacementPage.jsx";
@@ -100,16 +101,7 @@ export default function App() {
         />
         <Route path="/formation" element={<RoomsPage />} />
         <Route path="/formation/salle/:runId" element={<RoomPage />} />
-        <Route
-          path="/classement"
-          element={
-            <ModulePage
-              crumb="TradeLab / Communauté"
-              title="Classement"
-              lead="Comparaison des performances entre traders."
-            />
-          }
-        />
+        <Route path="/classement" element={<ClassementPage />} />
         <Route path="/administration" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="utilisateurs" element={<AdminUsers />} />

@@ -17,6 +17,7 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 INITIAL_CASH = 100_000.0
 
 LEVEL_RANK = {"debutant": 0, "intermediaire": 1, "pro": 2}
+VALIDATION_SCORE = 3.0  # score minimal d'une partie terminée pour valider la salle
 PREP_SECONDS = 60
 SECONDS_PER_DAY = {"debutant": 20, "intermediaire": 15, "pro": 12}
 
@@ -236,6 +237,7 @@ def build_state(run, now: datetime, names: dict[str, str]) -> dict:
             "return_pct": run.return_pct,
             "max_drawdown_pct": run.max_drawdown_pct,
             "completed": run.status == "finished",
+            "validated": run.status == "finished" and run.score is not None and run.score >= VALIDATION_SCORE,
             "days_played": idx + 1,
         }
     return state

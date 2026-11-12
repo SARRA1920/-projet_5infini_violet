@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { createChart } from "lightweight-charts";
+import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 import "./rooms.css";
 
@@ -44,6 +45,7 @@ function PriceChart({ history }) {
 export default function RoomPage() {
   const { runId } = useParams();
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [s, setS] = useState(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
@@ -63,6 +65,11 @@ export default function RoomPage() {
   useEffect(() => {
     api(`/formation/runs/${runId}`).then(apply).catch((err) => setError(err.message));
   }, [runId, apply]);
+
+  // Montée de niveau : met à jour le badge de l'en-tête
+  useEffect(() => {
+    if (s?.promotion) refreshUser().catch(() => {});
+  }, [s?.promotion, refreshUser]);
 
   // Chronomètre : décompte local, resynchronisé à l'arrivée du temps écoulé
   useEffect(() => {
@@ -299,6 +306,16 @@ export default function RoomPage() {
               </li>
             </ul>
             <p className="rm-muted">Score = rendement − (perte maximale ÷ 2)</p>
+            {s.result.validated && <p className="rm-validated">✓ Salle validée</p>}
+            {s.result.completed && !s.result.validated && (
+              <p className="rm-muted">Il fallait au moins 3 points pour valider cette salle. Tu peux réessayer.</p>
+            )}
+            {s.promotion && (
+              <div className="rm-promo">
+                🎉 Niveau supérieur ! Tu passes <strong>{s.promotion.to_label}</strong>. De nouvelles salles sont
+                débloquées.
+              </div>
+            )}
             <div className="rm-actions">
               <button className="rm-btn" onClick={() => navigate("/formation")}>
                 Retour aux salles
