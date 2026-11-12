@@ -19,6 +19,7 @@ export default defineConfig({
       "^/trading/": { target: backend, changeOrigin: true },
       "^/admin/": { target: backend, changeOrigin: true },
       "^/analysis/": { target: backend, changeOrigin: true },
+      "^/stress/": { target: backend, changeOrigin: true },
     },
   },
 });

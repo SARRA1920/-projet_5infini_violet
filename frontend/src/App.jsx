@@ -21,6 +21,7 @@ import MarketsPage from "./pages/MarketsPage.jsx";
 import ModulePage from "./pages/ModulePage.jsx";
 import PortfolioPage from "./pages/PortfolioPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import StressPage from "./pages/StressPage.jsx";
 import TradingPage from "./pages/TradingPage.jsx";
 
 function PrivateShell() {
@@ -67,16 +68,7 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/stress-testing"
-          element={
-            <ModulePage
-              crumb="TradeLab / Intelligence"
-              title="Stress Testing"
-              lead="Scénarios de stress sur les banques synthétiques."
-            />
-          }
-        />
+        <Route path="/stress-testing" element={<StressPage />} />
         <Route
           path="/actuariat"
           element={
