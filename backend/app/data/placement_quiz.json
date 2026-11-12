@@ -1,0 +1,306 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "points": 1,
+      "prompt": "Qu'est-ce qu'une action ?",
+      "options": [
+        "Un titre de propriété d'une petite part du capital d'une entreprise",
+        "Un prêt accordé à une entreprise, remboursé avec des intérêts",
+        "Un contrat d'assurance contre les pertes",
+        "Une monnaie étrangère"
+      ],
+      "answer": 0,
+      "explanation": "Une action représente une part du capital d'une entreprise : son détenteur est actionnaire."
+    },
+    {
+      "id": 2,
+      "points": 1,
+      "prompt": "Qu'est-ce que la Bourse ?",
+      "options": [
+        "Une banque qui accorde des crédits",
+        "Un marché organisé où s'échangent des titres financiers",
+        "Un impôt sur les gains financiers",
+        "Un organisme qui fixe le prix de l'or"
+      ],
+      "answer": 1,
+      "explanation": "La Bourse est un marché réglementé où acheteurs et vendeurs échangent des actions, des obligations et d'autres titres."
+    },
+    {
+      "id": 3,
+      "points": 1,
+      "prompt": "Qu'est-ce qu'une obligation ?",
+      "options": [
+        "Une part de propriété d'une entreprise",
+        "Une obligation légale de déclarer ses revenus",
+        "Un titre de dette : l'investisseur prête de l'argent et reçoit des intérêts",
+        "Un ordre d'achat qui doit être exécuté le jour même"
+      ],
+      "answer": 2,
+      "explanation": "En achetant une obligation, on prête de l'argent à une entreprise ou à un État, qui verse des intérêts (les coupons) puis rembourse."
+    },
+    {
+      "id": 4,
+      "points": 1,
+      "prompt": "Que signifie « le cours d'une action monte » ?",
+      "options": [
+        "Son prix de marché augmente",
+        "L'entreprise a embauché du personnel",
+        "Le nombre d'actions en circulation augmente",
+        "La Bourse ferme plus tard"
+      ],
+      "answer": 0,
+      "explanation": "Le cours est le prix auquel l'action s'échange sur le marché ; quand il monte, l'action vaut plus cher."
+    },
+    {
+      "id": 5,
+      "points": 1,
+      "prompt": "Qu'est-ce qu'un portefeuille d'investissement ?",
+      "options": [
+        "Un compte bancaire sans intérêts",
+        "Un document qui prouve l'identité de l'investisseur",
+        "Un type d'ordre de Bourse",
+        "L'ensemble des placements et des liquidités détenus par un investisseur"
+      ],
+      "answer": 3,
+      "explanation": "Le portefeuille regroupe tout ce que détient l'investisseur : titres, devises et argent disponible (le cash)."
+    },
+    {
+      "id": 6,
+      "points": 1,
+      "prompt": "Si EUR/USD = 1,10, que cela signifie-t-il ?",
+      "options": [
+        "1 dollar vaut 1,10 euro",
+        "1 euro vaut 1,10 dollar",
+        "Le dollar a perdu 10 % de sa valeur",
+        "L'euro a gagné 1,10 % aujourd'hui"
+      ],
+      "answer": 1,
+      "explanation": "Une paire de devises indique le prix de la première monnaie exprimé dans la seconde : ici 1 euro s'échange contre 1,10 dollar."
+    },
+    {
+      "id": 7,
+      "points": 1,
+      "prompt": "Qu'est-ce qu'une salle de marché ?",
+      "options": [
+        "Une salle de cours consacrée à la comptabilité",
+        "Un entrepôt où l'on stocke des matières premières",
+        "Le lieu où l'on imprime la monnaie",
+        "Le lieu (ou la plateforme) où des opérateurs passent des ordres d'achat et de vente d'actifs financiers"
+      ],
+      "answer": 3,
+      "explanation": "Dans une salle de marché, les opérateurs (traders) achètent et vendent des actions, devises, obligations ou matières premières."
+    },
+    {
+      "id": 8,
+      "points": 1,
+      "prompt": "Que fait un trader qui « vend » une action qu'il possède ?",
+      "options": [
+        "Il la cède et récupère de l'argent",
+        "Il en achète une deuxième",
+        "Il emprunte de l'argent à la banque",
+        "Il reçoit un dividende"
+      ],
+      "answer": 0,
+      "explanation": "Vendre, c'est céder le titre à un acheteur contre de l'argent, au prix du marché."
+    },
+    {
+      "id": 9,
+      "points": 2,
+      "prompt": "Qu'est-ce qu'un ordre « au marché » ?",
+      "options": [
+        "Un ordre exécuté seulement si le prix atteint un niveau précis",
+        "Un ordre exécuté immédiatement au prix courant du marché",
+        "Un ordre valable un an",
+        "Un ordre réservé aux professionnels"
+      ],
+      "answer": 1,
+      "explanation": "Un ordre au marché est exécuté tout de suite au prix du moment, sans attendre un niveau de prix particulier."
+    },
+    {
+      "id": 10,
+      "points": 2,
+      "prompt": "À quoi sert un « stop loss » ?",
+      "options": [
+        "À acheter plus si le prix baisse",
+        "À doubler la mise après une perte",
+        "À vendre quand le prix tombe sous un seuil fixé, pour limiter la perte",
+        "À empêcher toute vente pendant une journée"
+      ],
+      "answer": 2,
+      "explanation": "Le stop loss fixe une perte maximale acceptée : si le prix descend sous ce seuil, on sort de la position."
+    },
+    {
+      "id": 11,
+      "points": 2,
+      "prompt": "À quoi sert un « take profit » ?",
+      "options": [
+        "À fixer un niveau de gain auquel on veut vendre pour encaisser le profit",
+        "À limiter la perte maximale d'une position",
+        "À payer moins de frais de courtage",
+        "À acheter automatiquement un second titre"
+      ],
+      "answer": 0,
+      "explanation": "Le take profit fixe un objectif de gain : quand le prix l'atteint, on vend pour sécuriser le bénéfice."
+    },
+    {
+      "id": 12,
+      "points": 2,
+      "prompt": "Qu'est-ce que la diversification ?",
+      "options": [
+        "Placer tout son capital sur l'actif qui monte le plus",
+        "Changer de courtier tous les mois",
+        "Répartir son capital sur plusieurs actifs pour réduire le risque",
+        "Acheter uniquement des devises"
+      ],
+      "answer": 2,
+      "explanation": "Ne pas mettre tous ses œufs dans le même panier : si un actif baisse, les autres peuvent compenser."
+    },
+    {
+      "id": 13,
+      "points": 2,
+      "prompt": "Que mesure la volatilité d'un actif ?",
+      "options": [
+        "Le montant des dividendes versés",
+        "L'ampleur des variations de son prix",
+        "Le nombre de titres échangés par jour",
+        "Le nom de la Bourse où il est coté"
+      ],
+      "answer": 1,
+      "explanation": "Plus un prix varie fortement et rapidement, plus l'actif est volatil, donc risqué à court terme."
+    },
+    {
+      "id": 14,
+      "points": 2,
+      "prompt": "Qu'est-ce qu'un indice boursier, comme le Tunindex ?",
+      "options": [
+        "Un titre qu'on peut acheter à la caisse d'une banque",
+        "La liste des entreprises en faillite",
+        "Un impôt payé sur chaque transaction",
+        "Un indicateur qui résume l'évolution d'un ensemble de valeurs cotées"
+      ],
+      "answer": 3,
+      "explanation": "Un indice suit un panier de valeurs : quand il monte, le marché dans son ensemble progresse."
+    },
+    {
+      "id": 15,
+      "points": 2,
+      "prompt": "Quand les taux d'intérêt montent, que se passe-t-il en général pour le prix des obligations déjà émises ?",
+      "options": [
+        "Il baisse",
+        "Il monte",
+        "Il ne change jamais",
+        "Il est multiplié par deux"
+      ],
+      "answer": 0,
+      "explanation": "Les nouvelles obligations offrent un meilleur taux, donc les anciennes, moins rémunératrices, deviennent moins attractives et leur prix baisse."
+    },
+    {
+      "id": 16,
+      "points": 2,
+      "prompt": "Qu'est-ce qu'un dividende ?",
+      "options": [
+        "Un frais prélevé à chaque achat d'action",
+        "Une partie du bénéfice qu'une entreprise verse à ses actionnaires",
+        "Un type d'obligation d'État",
+        "La différence entre le prix d'achat et le prix de vente"
+      ],
+      "answer": 1,
+      "explanation": "Le dividende est la part du bénéfice distribuée aux actionnaires, généralement chaque année."
+    },
+    {
+      "id": 17,
+      "points": 3,
+      "prompt": "Un portefeuille a une VaR à 95 % sur 1 jour de 2 000. Comment l'interpréter ?",
+      "options": [
+        "Il perdra exactement 2 000 chaque jour",
+        "Il gagnera au moins 2 000 dans 95 % des jours",
+        "Dans 95 % des jours, la perte ne devrait pas dépasser 2 000",
+        "La perte maximale possible est de 2 000"
+      ],
+      "answer": 2,
+      "explanation": "La VaR est un seuil de perte : 95 % du temps la perte reste en dessous, mais les 5 % restants peuvent être pires."
+    },
+    {
+      "id": 18,
+      "points": 3,
+      "prompt": "Qu'est-ce que le drawdown maximal ?",
+      "options": [
+        "La plus forte baisse entre un sommet et le creux qui suit",
+        "Le nombre maximal d'ordres par jour",
+        "La perte du premier jour d'investissement",
+        "Le plus gros dividende reçu"
+      ],
+      "answer": 0,
+      "explanation": "Il mesure la pire chute subie depuis un sommet : c'est une mesure du risque de « galère » pour l'investisseur."
+    },
+    {
+      "id": 19,
+      "points": 3,
+      "prompt": "Un RSI à 80 sur 14 jours indique en général…",
+      "options": [
+        "Un actif sous-évalué à acheter à coup sûr",
+        "Un actif suracheté, après une forte hausse récente, avec un risque de repli",
+        "Un actif sans aucune volatilité",
+        "Une entreprise sur le point de verser un dividende"
+      ],
+      "answer": 1,
+      "explanation": "Au-dessus de 70, le RSI signale un actif qui a beaucoup monté : un repli est possible, ce n'est pas une certitude."
+    },
+    {
+      "id": 20,
+      "points": 3,
+      "prompt": "Un portefeuille passe de 10 000 à 12 000, puis tombe à 9 000. Quel est son drawdown maximal ?",
+      "options": [
+        "10 %",
+        "20 %",
+        "30 %",
+        "25 %"
+      ],
+      "answer": 3,
+      "explanation": "La chute va du sommet 12 000 au creux 9 000 : (12 000 − 9 000) / 12 000 = 25 %."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Action",
+      "definition": "Part du capital d'une entreprise. Son détenteur, l'actionnaire, possède une petite fraction de l'entreprise."
+    },
+    {
+      "term": "Obligation",
+      "definition": "Titre de dette : on prête de l'argent à une entreprise ou à un État, qui verse des intérêts (coupons) puis rembourse le capital."
+    },
+    {
+      "term": "Cours",
+      "definition": "Prix auquel un actif s'échange sur le marché à un instant donné."
+    },
+    {
+      "term": "Ordre d'achat / de vente",
+      "definition": "Instruction donnée pour acheter ou vendre un actif, au prix du marché ou à un prix choisi."
+    },
+    {
+      "term": "Portefeuille",
+      "definition": "Ensemble des actifs et des liquidités détenus par un investisseur."
+    },
+    {
+      "term": "Diversification",
+      "definition": "Répartir son capital sur plusieurs actifs pour qu'une baisse isolée pèse moins sur l'ensemble."
+    },
+    {
+      "term": "Volatilité",
+      "definition": "Mesure de l'ampleur des variations du prix d'un actif : plus elle est élevée, plus l'actif est risqué à court terme."
+    },
+    {
+      "term": "Stop loss / Take profit",
+      "definition": "Seuils automatiques de vente : le stop loss limite la perte, le take profit sécurise un gain."
+    },
+    {
+      "term": "Drawdown",
+      "definition": "Plus forte baisse subie entre un sommet et le creux qui suit. Exemple : de 12 000 à 9 000, le drawdown est de 25 %."
+    },
+    {
+      "term": "VaR (Value at Risk)",
+      "definition": "Perte qu'on ne devrait pas dépasser dans 95 % des cas sur une période donnée ; les 5 % restants peuvent être pires."
+    }
+  ]
+}
