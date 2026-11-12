@@ -11,7 +11,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.models import Asset, CrisisRun, User, UserRole
 from app.services import crisis as rooms
-from app.services import placement
+from app.services import placement, progression
 
 router = APIRouter(prefix="/formation", tags=["formation"])
 
@@ -95,6 +95,7 @@ def list_rooms(user: User = Depends(get_current_user), db: Session = Depends(get
         crisis = rooms.load_crisis(key)
         mine = [r for r in runs if r.crisis_key == key]
         done = [r for r in mine if r.status != "active" and r.score is not None]
+        validated = any(progression.is_validating(r) for r in mine)
         active = next((r for r in mine if r.status == "active"), None)
         meta = crisis["meta"]
         result.append(
@@ -111,6 +112,7 @@ def list_rooms(user: User = Depends(get_current_user), db: Session = Depends(get
                 "attempts": len(done),
                 "best_score": max((r.score for r in done), default=None),
                 "active_run_id": active.id if active else None,
+                "validated": validated,
             }
         )
     return result
@@ -179,5 +181,26 @@ def run_next(run_id: int, user: User = Depends(get_current_user), db: Session = 
     except rooms.RoomError as exc:
         db.commit()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    promotion = None
+    if run.status == "finished" and not _is_admin(user):
+        all_runs = db.scalars(select(CrisisRun).where(CrisisRun.user_id == user.id)).all()
+        promotion = progression.apply_promotion(user, all_runs)
     db.commit()
-    return rooms.build_state(run, now, _names(db))
+    state = rooms.build_state(run, now, _names(db))
+    if promotion:
+        state["promotion"] = promotion
+    return state
+
+
+@router.get("/progress")
+def get_progress(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Avancement vers le niveau suivant : salles validées parmi celles du niveau actuel."""
+    _require_placed(user)
+    runs = db.scalars(select(CrisisRun).where(CrisisRun.user_id == user.id)).all()
+    return progression.progress(user.level, runs)
+
+
+@router.get("/leaderboard")
+def get_leaderboard(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Classement général et par salle (tentatives terminées, tous les joueurs avec leur pseudo)."""
+    return progression.leaderboard(db, user.id)

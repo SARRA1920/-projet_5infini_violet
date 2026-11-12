@@ -16,6 +16,7 @@ const frDate = (iso) => new Date(iso).toLocaleDateString("fr-FR", { month: "shor
 export default function RoomsPage() {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState(null);
+  const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
 
@@ -23,6 +24,9 @@ export default function RoomsPage() {
     api("/formation/rooms")
       .then(setRooms)
       .catch((err) => setError(err.message));
+    api("/formation/progress")
+      .then(setProgress)
+      .catch(() => {});
   }, []);
 
   async function enter(room) {
@@ -54,6 +58,31 @@ export default function RoomsPage() {
       </div>
       {error && <p className="status error">{error}</p>}
 
+      {progress && (
+        <div className="rm-progress">
+          {progress.next_level ? (
+            <>
+              <p>
+                <strong>Ton niveau : {LEVEL[progress.level].label}.</strong> Valide{" "}
+                {progress.required === 1 ? "la salle" : `les ${progress.required} salles`} de ton niveau pour passer{" "}
+                <strong>{progress.next_label}</strong> : termine-les avant la fin du chronomètre avec au moins{" "}
+                {progress.validation_score} points.
+              </p>
+              <div className="rm-progress-bar">
+                <div style={{ width: `${(progress.done / progress.required) * 100}%` }} />
+              </div>
+              <span className="rm-muted">
+                {progress.done} / {progress.required} salles validées
+              </span>
+            </>
+          ) : (
+            <p>
+              <strong>Niveau Pro : le plus haut niveau.</strong> Améliore tes scores pour grimper dans le classement.
+            </p>
+          )}
+        </div>
+      )}
+
       {ORDER.map((level) => {
         const group = rooms.filter((r) => r.level === level);
         if (!group.length) return null;
@@ -69,6 +98,7 @@ export default function RoomsPage() {
                   <div className="rm-card-top">
                     <h3>{room.name}</h3>
                     {room.locked && <span className="rm-lock">🔒 Verrouillée</span>}
+                    {room.validated && <span className="rm-valid">✓ Validée</span>}
                   </div>
                   <p className="rm-story">{room.story}</p>
                   <ul className="rm-meta">
@@ -89,7 +119,7 @@ export default function RoomsPage() {
                     <span className="rm-best">
                       {room.best_score === null
                         ? "Jamais jouée"
-                        : `Meilleur score : ${room.best_score} pts · ${room.attempts} essai${room.attempts > 1 ? "s" : ""}`}
+                        : `Meilleur score : ${room.best_score.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pts · ${room.attempts} essai${room.attempts > 1 ? "s" : ""}`}
                     </span>
                     <button
                       className="rm-btn"
