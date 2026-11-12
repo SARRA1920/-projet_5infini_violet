@@ -32,3 +32,16 @@ class UserPublic(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    detail: str
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str = Field(min_length=20, max_length=200)
+    password: str = Field(min_length=8, max_length=128)
