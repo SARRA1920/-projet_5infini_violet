@@ -23,7 +23,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.core.database import SessionLocal
 from app.models.models import Asset, AssetType, PriceHistory
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data_import"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data_import"
 ASSETS_CSV = DATA_DIR / "bvmt_assets.csv"
 PRICES_CSV = DATA_DIR / "bvmt_prices.csv"
 
