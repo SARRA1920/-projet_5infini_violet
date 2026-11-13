@@ -222,3 +222,24 @@ class CrisisRun(Base):
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+
+# ---------- Sécurité : journal d'audit ----------
+class AuditLog(Base):
+    """Trace des opérations sensibles (connexion, ordres, changements de rôle...)."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Nullable : on garde le log si l'utilisateur est supprimé, et on peut
+    # tracer une tentative de connexion échouée (utilisateur inconnu).
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    operation_type: Mapped[str] = mapped_column(String(50), index=True)  # LOGIN, LOGIN_FAILED, ORDER_CREATE...
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)  # 45 = taille max d'une IPv6
