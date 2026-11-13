@@ -11,6 +11,7 @@ avec Docker, puis comment contribuer sans perturber le travail des
 autres membres.
 
 
+
 ------------------------------------------------------------------------
 
 ## 1. Stack technique

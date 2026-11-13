@@ -1,0 +1,110 @@
+{
+  "crises": [
+    {
+      "key": "covid_2020",
+      "name": "Krach du Covid-19",
+      "level": "debutant",
+      "start": "2020-02-03",
+      "end": "2020-04-30",
+      "story": "Février 2020 : une épidémie inconnue arrive en Occident. En un mois, les marchés mondiaux perdent environ un tiers de leur valeur, puis rebondissent grâce aux banques centrales.",
+      "symbols": [
+        "SPY",
+        "QQQ",
+        "JPM",
+        "AAPL",
+        "TLT",
+        "XAU/USD",
+        "USO",
+        "EUR/USD"
+      ]
+    },
+    {
+      "key": "brexit_2016",
+      "name": "Brexit",
+      "level": "debutant",
+      "start": "2016-06-01",
+      "end": "2016-08-31",
+      "story": "23 juin 2016 : le Royaume-Uni vote pour quitter l'Union européenne, contre toute attente. La livre sterling chute d'environ 8 % en une seule journée.",
+      "symbols": [
+        "GBP/USD",
+        "EWU",
+        "EZU",
+        "SPY",
+        "XAU/USD",
+        "TLT",
+        "EUR/USD"
+      ]
+    },
+    {
+      "key": "euro_debt_2011",
+      "name": "Crise de la dette européenne",
+      "level": "intermediaire",
+      "start": "2011-07-01",
+      "end": "2011-10-31",
+      "story": "Été 2011 : la Grèce, l'Italie et l'Espagne inquiètent les investisseurs. Les actions européennes s'effondrent pendant que l'or et les bons du Trésor américain servent de refuge.",
+      "symbols": [
+        "EZU",
+        "EWQ",
+        "EWG",
+        "SPY",
+        "XAU/USD",
+        "TLT",
+        "EUR/USD",
+        "LQD"
+      ]
+    },
+    {
+      "key": "oil_2014",
+      "name": "Krach du pétrole",
+      "level": "intermediaire",
+      "start": "2014-09-01",
+      "end": "2015-01-30",
+      "story": "Fin 2014 : l'offre de pétrole explose et la demande ralentit. Le baril perd plus de la moitié de sa valeur en quelques mois : une baisse lente, qui piège les acheteurs trop pressés.",
+      "symbols": [
+        "USO",
+        "SPY",
+        "JPM",
+        "XAU/USD",
+        "TLT",
+        "HYG",
+        "EEM"
+      ]
+    },
+    {
+      "key": "crisis_2008",
+      "name": "Crise financière de 2008",
+      "level": "pro",
+      "start": "2008-09-02",
+      "end": "2009-03-30",
+      "story": "15 septembre 2008 : Lehman Brothers fait faillite. Les banques s'effondrent, le crédit se bloque, et les marchés perdent près de la moitié de leur valeur avec plusieurs faux rebonds.",
+      "symbols": [
+        "SPY",
+        "JPM",
+        "TLT",
+        "XAU/USD",
+        "HYG",
+        "EEM",
+        "LQD",
+        "USO"
+      ]
+    },
+    {
+      "key": "rates_2022",
+      "name": "Hausse des taux de 2022",
+      "level": "pro",
+      "start": "2022-04-01",
+      "end": "2022-10-14",
+      "story": "2022 : l'inflation force les banques centrales à relever vivement leurs taux. Pour une fois, les actions et les obligations baissent en même temps : la diversification classique ne protège plus.",
+      "symbols": [
+        "SPY",
+        "QQQ",
+        "TLT",
+        "LQD",
+        "XAU/USD",
+        "USO",
+        "EUR/USD",
+        "SHY"
+      ]
+    }
+  ]
+}

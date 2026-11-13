@@ -2,6 +2,23 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell.jsx";
 import GuestRoute from "./components/GuestRoute.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
+import {
+  AdminAudit,
+  AdminDashboard,
+  AdminFormation,
+  AdminMarkets,
+  AdminModels,
+  AdminResults,
+  AdminScenarios,
+  AdminSettings,
+  AdminUsers,
+} from "./pages/admin/AdminPages.jsx";
+import AnalysisPage from "./pages/AnalysisPage.jsx";
+import ClassementPage from "./pages/ClassementPage.jsx";
+import RoomPage from "./pages/RoomPage.jsx";
+import RoomsPage from "./pages/RoomsPage.jsx";
+import PlacementPage from "./pages/PlacementPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
@@ -38,21 +55,20 @@ export default function App() {
         }
       />
       <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/formation/niveau"
+        element={
+          <ProtectedRoute>
+            <PlacementPage />
+          </ProtectedRoute>
+        }
+      />
       <Route element={<PrivateShell />}>
         <Route path="/accueil" element={<DashboardPage />} />
         <Route path="/marches" element={<MarketsPage />} />
         <Route path="/trading" element={<TradingPage />} />
         <Route path="/portefeuille" element={<PortfolioPage />} />
-        <Route
-          path="/analyse"
-          element={
-            <ModulePage
-              crumb="TradeLab / Analyse"
-              title="Analyse"
-              lead="Les indicateurs et graphiques avancés seront ajoutés avec le module d'analyse."
-            />
-          }
-        />
+        <Route path="/analyse" element={<AnalysisPage />} />
         <Route
           path="/ia"
           element={
@@ -83,36 +99,20 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/formation"
-          element={
-            <ModulePage
-              crumb="TradeLab / Communauté"
-              title="Formation"
-              lead="Parcours et exercices de la salle de marché."
-            />
-          }
-        />
-        <Route
-          path="/classement"
-          element={
-            <ModulePage
-              crumb="TradeLab / Communauté"
-              title="Classement"
-              lead="Comparaison des performances entre traders."
-            />
-          }
-        />
-        <Route
-          path="/administration"
-          element={
-            <ModulePage
-              crumb="TradeLab / Communauté"
-              title="Administration"
-              lead="Gestion des comptes et des rôles."
-            />
-          }
-        />
+        <Route path="/formation" element={<RoomsPage />} />
+        <Route path="/formation/salle/:runId" element={<RoomPage />} />
+        <Route path="/classement" element={<ClassementPage />} />
+        <Route path="/administration" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="marches" element={<AdminMarkets />} />
+          <Route path="formation" element={<AdminFormation />} />
+          <Route path="scenarios" element={<AdminScenarios />} />
+          <Route path="parametres" element={<AdminSettings />} />
+          <Route path="modeles" element={<AdminModels />} />
+          <Route path="resultats" element={<AdminResults />} />
+          <Route path="audit" element={<AdminAudit />} />
+        </Route>
       </Route>
     </Routes>
   );

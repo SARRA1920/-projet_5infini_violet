@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import GuideTour from "./GuideTour.jsx";
 
 const NAV = [
   {
@@ -149,7 +150,12 @@ export default function AppShell() {
   }
 
   const initials = (user?.username || "?").slice(0, 2).toUpperCase();
-  const roleLabel = user?.role === "admin" ? "Admin" : "Trader Pro";
+  const LEVEL_LABELS = { debutant: "Trader Débutant", intermediaire: "Trader Intermédiaire", pro: "Trader Pro" };
+  const roleLabel = user?.role === "admin" ? "Admin" : LEVEL_LABELS[user?.level] || "Trader";
+  const groups = NAV.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.to !== "/administration" || user?.role === "admin"),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <div className="shell">
@@ -166,7 +172,7 @@ export default function AppShell() {
         </div>
 
         <nav className="side-nav">
-          {NAV.map((group) => (
+          {groups.map((group) => (
             <div key={group.section || "main"}>
               {group.section && <p className="nav-section">{group.section}</p>}
               {group.items.map((item) => (
@@ -174,6 +180,7 @@ export default function AppShell() {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  data-tour={item.to}
                   className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
                 >
                   <Icon name={item.icon} />
@@ -196,7 +203,7 @@ export default function AppShell() {
 
       <div className="shell-main">
         <header className="topbar">
-          <label className="search">
+          <label className="search" data-tour="search">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="1.8" />
               <path d="M16 16l5 5" stroke="currentColor" strokeWidth="1.8" />
@@ -229,6 +236,7 @@ export default function AppShell() {
             <button
               type="button"
               className="user-chip"
+              data-tour="user"
               onClick={() => setMenu(menu === "user" ? null : "user")}
             >
               <span className="avatar">{initials}</span>
@@ -251,6 +259,7 @@ export default function AppShell() {
         <div className="shell-content">
           <Outlet />
         </div>
+        {user.role !== "admin" && user.level && !user.guide_seen_at && <GuideTour />}
       </div>
     </div>
   );

@@ -17,6 +17,10 @@ export default defineConfig({
       "/auth": { target: backend, changeOrigin: true },
       "/quotes": { target: backend, changeOrigin: true },
       "^/trading/": { target: backend, changeOrigin: true },
+      "^/admin/": { target: backend, changeOrigin: true },
+      "^/analysis/": { target: backend, changeOrigin: true },
+      // Seulement les routes d'API : /formation/niveau et /formation/salle/... sont des pages React.
+      "^/formation/(placement|rooms|runs|guide|progress|leaderboard)": { target: backend, changeOrigin: true },
     },
   },
 });

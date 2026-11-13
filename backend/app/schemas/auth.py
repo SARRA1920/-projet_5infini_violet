@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.models import UserRole
@@ -23,6 +25,8 @@ class UserPublic(BaseModel):
     email: str
     username: str
     role: UserRole
+    level: str | None = None
+    guide_seen_at: datetime | None = None
 
 
 class TokenResponse(BaseModel):

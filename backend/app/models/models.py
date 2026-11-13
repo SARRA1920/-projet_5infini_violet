@@ -8,8 +8,11 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    JSON,
     Enum,
+    Float,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     UniqueConstraint,
@@ -53,6 +56,12 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # Formation : niveau issu du QCM d'entrée (debutant / intermediaire / pro)
+    level: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    placement_score: Mapped[int | None] = mapped_column(nullable=True)
+    placement_done_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Formation : date à laquelle le guide d'accueil a été terminé ou passé (une seule fois)
+    guide_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     portfolios: Mapped[list["Portfolio"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -139,6 +148,9 @@ class Transaction(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     stop_loss: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
     take_profit: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    # Gain ou perte réalisé par une vente (vide pour un achat) :
+    # (prix de vente - prix moyen d'achat) x quantité
+    realized_pnl: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     executed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="transactions")
@@ -171,3 +183,24 @@ class Bank(Base):
     equity_capital: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     real_estate_share: Mapped[Decimal] = mapped_column(Numeric(5, 4))  # part des actifs, ex: 0.35
     capital_ratio: Mapped[Decimal] = mapped_column(Numeric(6, 4))      # ratio de solvabilité
+
+
+# ---------- Formation : salles de crise ----------
+class CrisisRun(Base):
+    """Une tentative d'un joueur dans une salle de crise (portefeuille virtuel à part)."""
+
+    __tablename__ = "crisis_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    crisis_key: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active / finished / timeout
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    day_index: Mapped[int] = mapped_column(Integer, default=0)
+    cash: Mapped[float] = mapped_column(Float)
+    positions: Mapped[dict] = mapped_column(JSON, default=dict)        # {symbole: quantité}
+    equity_curve: Mapped[list] = mapped_column(JSON, default=list)    # valeur du portefeuille à la fin de chaque jour
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
