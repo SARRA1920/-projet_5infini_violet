@@ -24,6 +24,15 @@ def _spark(closes: list[Decimal]) -> list[float]:
     return [round(24 - (float(price - low) / span) * 18, 2) for price in closes]
 
 
+def _currency(asset: Asset) -> str:
+    """Devise d'affichage : TND pour les actions BVMT (Bourse de Tunis), sinon USD."""
+    if asset.asset_type == AssetType.FOREX:
+        return ""
+    if asset.symbol.startswith("TN") or asset.symbol.startswith("BVMT-"):
+        return "TND"
+    return "USD"
+
+
 def _row(asset: Asset, history: list[PriceHistory]) -> dict:
     latest = history[-1]
     previous = history[-2] if len(history) > 1 else latest
@@ -33,7 +42,7 @@ def _row(asset: Asset, history: list[PriceHistory]) -> dict:
         else Decimal("0")
     )
     digits = 4 if asset.asset_type == AssetType.FOREX else 2
-    currency = "" if asset.asset_type == AssetType.FOREX else "USD"
+    currency = _currency(asset)
     group = {
         AssetType.STOCK: "actions",
         AssetType.FOREX: "devises",
