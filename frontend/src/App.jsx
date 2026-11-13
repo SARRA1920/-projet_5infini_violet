@@ -22,11 +22,13 @@ import RoomPage from "./pages/RoomPage.jsx";
 import RoomsPage from "./pages/RoomsPage.jsx";
 import PlacementPage from "./pages/PlacementPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MarketsPage from "./pages/MarketsPage.jsx";
 import ModulePage from "./pages/ModulePage.jsx";
 import PortfolioPage from "./pages/PortfolioPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import StressPage from "./pages/StressPage.jsx";
 import TradingPage from "./pages/TradingPage.jsx";
 
 // Module Actuariat chargé à la demande : recharts n'alourdit pas les autres écrans.
@@ -66,6 +68,14 @@ export default function App() {
           </GuestRoute>
         }
       />
+      <Route
+        path="/mot-de-passe-oublie"
+        element={
+          <GuestRoute>
+            <ForgotPasswordPage />
+          </GuestRoute>
+        }
+      />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route
         path="/formation/niveau"
@@ -91,16 +101,7 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/stress-testing"
-          element={
-            <ModulePage
-              crumb="TradeLab / Intelligence"
-              title="Stress Testing"
-              lead="Scénarios de stress sur les banques synthétiques."
-            />
-          }
-        />
+        <Route path="/stress-testing" element={<StressPage />} />
         <Route path="/actuariat" element={<ActuarialLayout />}>
           <Route index element={<ActuarialDashboard />} />
           <Route path="risque" element={<RiskAnalyticsPage />} />

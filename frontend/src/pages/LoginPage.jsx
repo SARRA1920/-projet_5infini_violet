@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -24,12 +24,13 @@ function LockIcon() {
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
+  const [info, setInfo] = useState(location.state?.info || "");
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event) {
@@ -104,9 +105,7 @@ export default function LoginPage() {
           <button
             type="button"
             className="text-link"
-            onClick={() =>
-              setInfo("La réinitialisation du mot de passe n'est pas encore disponible.")
-            }
+            onClick={() => navigate("/mot-de-passe-oublie", { state: { email } })}
           >
             Mot de passe oublié ?
           </button>
