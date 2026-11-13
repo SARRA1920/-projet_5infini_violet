@@ -1,0 +1,617 @@
+/* Module Actuariat : complète shell.css (thème sombre). */
+
+.act-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.2rem;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.act-tabs a {
+  flex: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px 8px 0 0;
+  color: #b7c3d4;
+  text-decoration: none;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.act-tabs a.active {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.act-tabs a:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.act-page .panel + .panel,
+.act-page .act-grid {
+  margin-top: 0.8rem;
+}
+
+.act-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.8rem;
+}
+
+.act-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #93a0b5;
+  font-size: 0.82rem;
+}
+
+.act-field input,
+.act-field select {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.act-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.8rem 0 0.2rem;
+  color: #93a0b5;
+  font-size: 0.82rem;
+}
+
+.act-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.act-badge-real_market_data {
+  background: rgba(61, 214, 140, 0.14);
+  color: #3dd68c;
+}
+
+.act-badge-synthetic {
+  background: rgba(245, 185, 74, 0.16);
+  color: #f5b94a;
+}
+
+.act-badge-user_assumption {
+  background: rgba(192, 132, 252, 0.16);
+  color: #c084fc;
+}
+
+.act-badge-simulated {
+  background: rgba(142, 183, 255, 0.16);
+  color: #8eb7ff;
+}
+
+.act-warning {
+  color: #f5b94a;
+}
+
+.act-kpis {
+  margin-top: 0.8rem;
+}
+
+.act-stale {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.act-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.8rem;
+}
+
+.act-grid .panel {
+  min-width: 0;
+}
+
+/* Deux panneaux côte à côte : pas de décalage vertical hérité de .panel + .panel */
+.act-page .act-grid .panel + .panel {
+  margin-top: 0;
+}
+
+.act-page .act-conventions {
+  margin-top: 0.8rem;
+}
+
+.act-empty,
+.act-note {
+  color: #93a0b5;
+  font-size: 0.85rem;
+}
+
+.act-bars {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.act-bars li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 0.8rem;
+}
+
+.act-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86rem;
+}
+
+.act-bars em {
+  font-style: normal;
+  color: #93a0b5;
+  font-size: 0.8rem;
+  grid-row: span 2;
+  align-self: end;
+}
+
+.act-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.act-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.act-conventions summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding-bottom: 0.4rem;
+}
+
+.act-conventions ul {
+  margin: 0.4rem 0 0.6rem;
+  padding-left: 1.1rem;
+  color: #b7c3d4;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+/* ---------- Phase 3 : formulaires, tableaux et graphiques ---------- */
+
+.act-page > .panel + .stat-grid,
+.act-page > .panel + .act-grid,
+.act-page > .banner + .panel,
+.act-page .act-results > * + * {
+  margin-top: 0.8rem;
+}
+
+/* Défini dans trading.css, qui n'est chargé qu'avec les écrans Trading et Portefeuille. */
+.act-page .table-scroll {
+  overflow-x: auto;
+}
+
+.act-page .stat-grid.act-kpis-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.act-field small {
+  color: #6f7d92;
+  font-size: 0.74rem;
+}
+
+.act-field textarea {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e8eef8;
+  font: inherit;
+  resize: vertical;
+}
+
+.act-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+.act-segmented button,
+.act-chips button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: transparent;
+  color: #b7c3d4;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.act-segmented button.active,
+.act-chips button.active {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.act-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.act-chips button {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.act-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.9rem 0 0.4rem;
+}
+
+.act-actions .act-meta {
+  margin: 0;
+}
+
+.primary-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.act-basket,
+.act-curve {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.act-basket-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 34px;
+  gap: 0.5rem;
+}
+
+.act-curve .act-basket-row,
+.act-calibrate .act-basket-row {
+  grid-template-columns: 1fr 1fr 34px;
+  margin-bottom: 0.45rem;
+}
+
+.act-basket-row select,
+.act-basket-row input {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.act-icon-btn,
+.act-link-btn,
+.act-secondary-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: transparent;
+  color: #b7c3d4;
+  font: inherit;
+  cursor: pointer;
+}
+
+.act-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.act-link-btn {
+  align-self: flex-start;
+  border: 0;
+  padding: 0.2rem 0;
+  color: #8eb7ff;
+  font-size: 0.85rem;
+}
+
+.act-secondary-btn {
+  margin-top: 0.6rem;
+  padding: 0.5rem 1rem;
+}
+
+.act-secondary-btn:hover,
+.act-icon-btn:hover:not(:disabled) {
+  border-color: #8eb7ff;
+  color: #fff;
+}
+
+.act-error {
+  color: #ff5d73;
+}
+
+.act-info {
+  color: #8eb7ff;
+}
+
+.act-kpis + .act-kpis {
+  margin-top: 0.8rem;
+}
+
+.act-table td span,
+.act-table th span {
+  color: #93a0b5;
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.act-row-selected td {
+  background: rgba(29, 78, 216, 0.16);
+}
+
+.act-clickable tbody tr {
+  cursor: pointer;
+}
+
+.act-clickable tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.act-heatmap {
+  border-collapse: separate;
+  border-spacing: 3px;
+  margin: 0.6rem 0;
+  font-size: 0.8rem;
+}
+
+.act-heatmap th {
+  color: #93a0b5;
+  font-weight: 600;
+  padding: 0.25rem 0.4rem;
+  white-space: nowrap;
+}
+
+.act-heatmap td {
+  min-width: 42px;
+  padding: 0.45rem 0.3rem;
+  border-radius: 6px;
+  color: #0b1220;
+  font-weight: 700;
+  text-align: center;
+}
+
+.act-inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.4rem;
+  margin: 0.7rem 0;
+  color: #b7c3d4;
+  font-size: 0.86rem;
+}
+
+.act-formula {
+  margin: 0 0 0.9rem;
+  color: #b7c3d4;
+  font-size: 0.88rem;
+}
+
+.act-formula code {
+  margin-right: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: #0b1220;
+  color: #f5b94a;
+}
+
+.act-two-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.4rem;
+}
+
+.act-subtitle {
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+  color: #e8eef8;
+}
+
+.act-calibrate {
+  margin-top: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.act-calibrate summary {
+  cursor: pointer;
+  color: #8eb7ff;
+  font-size: 0.86rem;
+}
+
+.act-calibrate[open] summary {
+  margin-bottom: 0.7rem;
+}
+
+.act-calibrate .act-field + .act-field {
+  margin-top: 0.6rem;
+}
+
+.act-calibration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.8rem;
+  color: #93a0b5;
+  font-size: 0.8rem;
+}
+
+.act-detail {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.act-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.9rem 0 0.2rem;
+  color: #b7c3d4;
+  font-size: 0.86rem;
+}
+
+.act-weight {
+  position: relative;
+  min-width: 90px;
+}
+
+.act-weight span {
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 3px;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+/* ---------- Phase 4 : modèles de pertes et laboratoire ---------- */
+
+.act-scenario {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) 34px;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.act-scenario input {
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e8eef8;
+  font: inherit;
+}
+
+.act-scenario-head span {
+  color: #93a0b5;
+  font-size: 0.76rem;
+}
+
+.act-configs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.8rem;
+}
+
+.act-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: #0e1626;
+}
+
+.act-config-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.act-config-head div {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.act-config .act-formula {
+  margin: 0;
+}
+
+.act-config .act-note {
+  margin: 0;
+}
+
+.act-filters-tight {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.act-inline-btn {
+  margin-top: 0;
+}
+
+.act-actions-top {
+  justify-content: flex-end;
+  margin: -0.4rem 0 0.4rem;
+}
+
+.act-lab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 0.8rem;
+}
+
+.act-assumptions {
+  margin: 0.4rem 0 0.4rem;
+  color: #b7c3d4;
+  font-size: 0.82rem;
+}
+
+.act-assumptions summary {
+  cursor: pointer;
+  color: #8eb7ff;
+}
+
+.act-assumptions pre {
+  max-height: 160px;
+  overflow: auto;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: #0b1220;
+  color: #93a0b5;
+  font-size: 0.75rem;
+}
+
+.act-row-actions {
+  display: flex;
+  gap: 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .act-grid,
+  .act-two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .act-page .stat-grid.act-kpis-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .act-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

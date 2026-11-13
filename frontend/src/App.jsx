@@ -1,7 +1,9 @@
+import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell.jsx";
 import GuestRoute from "./components/GuestRoute.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ActuarialLayout from "./pages/actuariat/ActuarialLayout.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import {
   AdminAudit,
@@ -26,6 +28,16 @@ import ModulePage from "./pages/ModulePage.jsx";
 import PortfolioPage from "./pages/PortfolioPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import TradingPage from "./pages/TradingPage.jsx";
+
+// Module Actuariat chargé à la demande : recharts n'alourdit pas les autres écrans.
+// Le Suspense est dans ActuarialLayout.
+const ActuarialDashboard = lazy(() => import("./pages/actuariat/ActuarialDashboard.jsx"));
+const RiskAnalyticsPage = lazy(() => import("./pages/actuariat/RiskAnalyticsPage.jsx"));
+const StochasticPage = lazy(() => import("./pages/actuariat/StochasticPage.jsx"));
+const FixedIncomePage = lazy(() => import("./pages/actuariat/FixedIncomePage.jsx"));
+const OptimizationPage = lazy(() => import("./pages/actuariat/OptimizationPage.jsx"));
+const LossModelingPage = lazy(() => import("./pages/actuariat/LossModelingPage.jsx"));
+const ModelLabPage = lazy(() => import("./pages/actuariat/ModelLabPage.jsx"));
 
 function PrivateShell() {
   return (
@@ -89,16 +101,15 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/actuariat"
-          element={
-            <ModulePage
-              crumb="TradeLab / Intelligence"
-              title="Actuariat"
-              lead="Les calculs actuariels seront ajoutés dans ce module."
-            />
-          }
-        />
+        <Route path="/actuariat" element={<ActuarialLayout />}>
+          <Route index element={<ActuarialDashboard />} />
+          <Route path="risque" element={<RiskAnalyticsPage />} />
+          <Route path="stochastique" element={<StochasticPage />} />
+          <Route path="obligations" element={<FixedIncomePage />} />
+          <Route path="optimisation" element={<OptimizationPage />} />
+          <Route path="pertes" element={<LossModelingPage />} />
+          <Route path="laboratoire" element={<ModelLabPage />} />
+        </Route>
         <Route path="/formation" element={<RoomsPage />} />
         <Route path="/formation/salle/:runId" element={<RoomPage />} />
         <Route path="/classement" element={<ClassementPage />} />

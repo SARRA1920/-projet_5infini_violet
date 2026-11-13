@@ -12,6 +12,7 @@ load_dotenv()
 
 from app.core.database import DATABASE_URL, Base  # noqa: E402
 from app.models import models  # noqa: E402,F401  (enregistre les modèles dans Base.metadata)
+from app.actuarial import models as actuarial_models  # noqa: E402,F401  (tables du module Actuariat)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
