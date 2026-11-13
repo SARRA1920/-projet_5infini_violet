@@ -34,7 +34,7 @@ def calibrate(rates: np.ndarray, dt: float) -> dict:
         raise ValueError("Au moins dix observations de taux sont nécessaires")
     x = np.column_stack([np.ones(rates.size - 1), rates[:-1]])
     (c, phi), residuals = ols(x, rates[1:])
-    if not 0 < phi < 1:
+    if not 0 < phi < 1 - 1e-9:
         raise ValueError(f"Pas de retour à la moyenne dans la série (φ = {phi:.4f}) : modèle non calibrable")
     a = -math.log(phi) / dt
     b = c / (1 - phi)
