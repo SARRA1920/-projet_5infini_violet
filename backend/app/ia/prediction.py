@@ -202,3 +202,21 @@ def retrain(db: Session, symbol: str, horizon: int = 5) -> int:
 def clear_cache() -> None:
     """Vide le cache des modèles (utile pour les tests)."""
     _model_cache.clear()
+
+
+def feature_importance(db: Session, symbol: str, horizon: int = 5) -> list[dict]:
+    """Renvoie l'importance de chaque feature pour le modèle entraîné.
+
+    Les importances proviennent de ``model.feature_importances_`` (RandomForest) :
+    elles mesurent à quel point chaque feature réduit l'impureté moyenne sur
+    l'ensemble des 200 arbres. La somme vaut 1. Les features sont triées par
+    importance décroissante pour un affichage immédiat sous forme de barres.
+    """
+    cached = _get_or_train(db, symbol, horizon)
+    importances = cached.model.feature_importances_
+    pairs = sorted(
+        zip(F.FEATURE_COLUMNS, importances.tolist()),
+        key=lambda kv: kv[1],
+        reverse=True,
+    )
+    return [{"name": name, "importance": float(val)} for name, val in pairs]

@@ -10,6 +10,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  BarChart,
+  Bar,
+  Cell,
 } from "recharts";
 import { iaApi } from "../../services/ia.js";
 import { fmtPct, fmtPrice, toneOf, HORIZONS } from "../../services/ia.js";
@@ -26,6 +29,7 @@ export default function PredictionPage() {
       .catch(() => {});
   }, []);
   const [data, setData] = useState(null);
+  const [featureImp, setFeatureImp] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,9 +38,14 @@ export default function PredictionPage() {
     setLoading(true);
     setError("");
     setData(null);
+    setFeatureImp(null);
     try {
       const result = await iaApi(`/predict/${symbol.toUpperCase()}`, { horizon });
       setData(result);
+      // Récupère l'importance des features en parallèle (indépendant de la prédiction).
+      iaApi(`/feature-importance/${symbol.toUpperCase()}`, { horizon })
+        .then(setFeatureImp)
+        .catch(() => setFeatureImp(null));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -116,9 +125,15 @@ export default function PredictionPage() {
                 {fmtPct(data.interval_low)} → {fmtPct(data.interval_high)}
               </strong>
             </div>
-            <div className="metric">
-              <span className="metric-label">Confiance</span>
+            <div className="metric metric-confidence">
+              <span className="metric-label">Confiance du modèle</span>
               <strong className="metric-value">{fmtPct(data.confidence)}</strong>
+              <div className="conf-gauge" title={`Dispersion des arbres : ${fmtPct(1 - data.confidence)}`}>
+                <div
+                  className="conf-gauge-fill"
+                  style={{ width: `${Math.max(2, data.confidence * 100)}%` }}
+                />
+              </div>
             </div>
             <div className="metric">
               <span className="metric-label">Échantillon d'entraînement</span>
@@ -174,6 +189,54 @@ export default function PredictionPage() {
               borne basse (quantile 10%). Le modèle est un RandomForestRegressor à 200 arbres.
             </p>
           </div>
+
+          {featureImp && featureImp.features && featureImp.features.length > 0 && (
+            <div className="ia-feature-importance">
+              <h3>Importance des features</h3>
+              <p className="ia-chart-note">
+                Quelles variables pèsent le plus dans la prédiction ? Plus la barre est longue,
+                plus la feature réduit l'impureté des arbres (somme = 100%).
+              </p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={featureImp.features}
+                  layout="vertical"
+                  margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <XAxis
+                    type="number"
+                    stroke="#93a0b5"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    stroke="#93a0b5"
+                    tick={{ fontSize: 11 }}
+                    width={120}
+                  />
+                  <Tooltip
+                    formatter={(v) => `${(v * 100).toFixed(2)}%`}
+                    contentStyle={{
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "#121a2b",
+                      color: "#e8eef8",
+                      fontSize: 13,
+                    }}
+                    labelStyle={{ color: "#93a0b5" }}
+                  />
+                  <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
+                    {featureImp.features.map((entry, i) => (
+                      <Cell key={i} fill={i === 0 ? "#2f7cf6" : "#3b82f6"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
     </div>

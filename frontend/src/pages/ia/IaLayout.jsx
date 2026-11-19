@@ -7,6 +7,7 @@ const TABS = [
   { to: "/ia/prediction", label: "Prédiction de cours" },
   { to: "/ia/sentiment", label: "Analyse de sentiment" },
   { to: "/ia/agent", label: "Agent de trading" },
+  { to: "/ia/backtest", label: "Backtest" },
 ];
 
 export default function IaLayout() {

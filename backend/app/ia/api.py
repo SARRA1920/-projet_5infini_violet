@@ -27,6 +27,10 @@ from . import agent as agent_mod
 from .schemas import (
     AgentDecisionOut,
     AgentReasonOut,
+    BacktestOut,
+    BacktestTradeOut,
+    FeatureImportanceItemOut,
+    FeatureImportanceOut,
     HeadlineSentimentOut,
     PredictionOut,
     RetrainOut,
@@ -168,4 +172,72 @@ def retrain(
         symbol=symbol,
         n_samples=n,
         message=f"Modèle réentraîné sur {n} échantillons pour {symbol}.",
+    )
+
+
+@router.get("/feature-importance/{symbol}", response_model=FeatureImportanceOut)
+def feature_importance(
+    symbol: str,
+    horizon: int = Query(5, ge=1, le=30),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Importance des features du modèle entraîné pour un actif.
+
+    Renvoie, pour chaque feature technique (RSI, SMA, rendements…), son poids
+    dans le RandomForest. La somme des importances vaut 1. Tri décroissant.
+    """
+    try:
+        features = pred.feature_importance(db, symbol, horizon=horizon)
+    except ValueError as e:
+        raise _bad_request(str(e))
+    return FeatureImportanceOut(
+        symbol=symbol.upper(),
+        horizon=horizon,
+        features=[
+            FeatureImportanceItemOut(name=f["name"], importance=f["importance"])
+            for f in features
+        ],
+    )
+
+
+@router.get("/backtest/{symbol}", response_model=BacktestOut)
+def backtest(
+    symbol: str,
+    horizon: int = Query(5, ge=1, le=30),
+    max_points: int = Query(120, ge=10, le=500),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Backtest de la stratégie d'agent sur l'historique passé.
+
+    Simule, pour chaque jour du passé où les données sont disponibles, la
+    décision de l'agent puis la compare au rendement réel. Renvoie le taux de
+    réussite, le rendement cumulé et un échantillon de trades.
+    """
+    try:
+        result = agent_mod.backtest(db, symbol, horizon=horizon, max_points=max_points)
+    except ValueError as e:
+        raise _bad_request(str(e))
+    return BacktestOut(
+        symbol=result.symbol,
+        horizon=result.horizon,
+        n_points=result.n_points,
+        n_buy=result.n_buy,
+        n_sell=result.n_sell,
+        n_hold=result.n_hold,
+        win_rate=result.win_rate,
+        total_return=result.total_return,
+        avg_predicted=result.avg_predicted,
+        avg_actual=result.avg_actual,
+        trades=[
+            BacktestTradeOut(
+                index=t.index,
+                action=t.action,
+                predicted_return=t.predicted_return,
+                actual_return=t.actual_return,
+                correct=t.correct,
+            )
+            for t in result.trades
+        ],
     )

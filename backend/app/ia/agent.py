@@ -210,3 +210,156 @@ def _load_recent_closes(db: Session, symbol: str, n: int = 120) -> list[float]:
     closes = [float(r.close) for r in rows]
     closes.reverse()  # du plus ancien au plus récent
     return closes
+
+
+# ---------------------------------------------------------------------------
+# Backtest : simule la stratégie de l'agent sur l'historique passé.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class BacktestTrade:
+    index: int
+    action: str               # "BUY" | "SELL" | "HOLD"
+    predicted_return: float
+    actual_return: float
+    correct: bool             # le sens prédit correspond-il au sens réel ?
+
+
+@dataclass
+class BacktestResult:
+    symbol: str
+    horizon: int
+    n_points: int             # nombre de jours évalués
+    n_buy: int
+    n_sell: int
+    n_hold: int
+    win_rate: float           # réussite des signaux directionnels (BUY+SELL)
+    total_return: float       # somme des rendements réels selon la position
+    avg_predicted: float
+    avg_actual: float
+    trades: list[BacktestTrade]
+
+
+def backtest(
+    db: Session,
+    symbol: str,
+    horizon: int = 5,
+    max_points: int = 120,
+) -> BacktestResult:
+    """Simule la stratégie de l'agent sur l'historique passé.
+
+    Pour chaque jour t où les features sont valides et le rendement futur réel
+    est connu, on calcule la décision de l'agent (BUY/SELL/HOLD) au regard des
+    données disponibles jusqu'à t, puis on la compare au rendement réel sur
+    l'horizon. Renvoie des métriques de performance et un échantillon de trades.
+
+    Note : le modèle est entraîné sur l'intégralité de l'historique disponible
+    (y compris les points testés), ce qui introduit un léger biais d'optimisme.
+    Pour un backtest rigoureux, il faudrait réentraîner sur une fenêtre
+    glissante — conservé comme évolution. L'objectif ici est pédagogique :
+    illustrer comment on mesure la qualité d'une stratégie.
+    """
+    closes, volumes, _ = pred._load_history(db, symbol)
+    if len(closes) < pred.MIN_HISTORY + horizon:
+        raise ValueError(
+            f"Historique insuffisant pour {symbol} : {len(closes)} points "
+            f"(minimum {pred.MIN_HISTORY + horizon})."
+        )
+
+    cached = pred._get_or_train(db, symbol, horizon)
+    model = cached.model
+    X, y, valid_idx = F.build_feature_matrix(closes, volumes, horizon=horizon)
+    if not valid_idx:
+        raise ValueError("Aucun point valide pour le backtest.")
+
+    # Imputation des NaN (volumes manquants → moyenne de colonne).
+    col_mean = np.nanmean(X[valid_idx], axis=0)
+    X_filled = X.copy()
+    nan_mask = ~np.isfinite(X_filled)
+    X_filled[nan_mask] = np.take(col_mean, np.where(nan_mask)[1])
+
+    # Indicateurs techniques précalculés une fois (gain de temps dans la boucle).
+    vol_arr = F.rolling_volatility(closes, 20)
+    rsi_arr = F.rsi(closes, 14)
+    sma20 = F.sma(closes, 20)
+    sma50 = F.sma(closes, 50)
+
+    trades: list[BacktestTrade] = []
+    n_buy = n_sell = n_hold = 0
+    wins = 0
+    total_return = 0.0
+    sum_pred = 0.0
+    sum_actual = 0.0
+
+    for t in valid_idx:
+        predicted = float(model.predict(X_filled[t].reshape(1, -1))[0])
+        actual = float(y[t])
+
+        # Volatilité au point t.
+        last_vol = float(vol_arr[t]) if np.isfinite(vol_arr[t]) else 0.02
+        last_vol = max(last_vol, 0.005)
+
+        # Signal technique au point t (RSI + croisement SMA20/SMA50).
+        last_rsi = float(rsi_arr[t]) if np.isfinite(rsi_arr[t]) else 50.0
+        tech = 0.0
+        if last_rsi < 30:
+            tech += 0.4
+        elif last_rsi > 70:
+            tech -= 0.4
+        if np.isfinite(sma20[t]) and np.isfinite(sma50[t]):
+            tech += 0.3 if sma20[t] > sma50[t] else -0.3
+        tech = max(-1.0, min(1.0, tech))
+
+        # Score composite (sentiment = 0, stub non connecté).
+        pred_signal = max(-1.0, min(1.0, predicted / (last_vol * np.sqrt(horizon))))
+        composite = max(-1.0, min(1.0, 0.5 * pred_signal + 0.3 * tech))
+
+        if composite > DECISION_THRESHOLD:
+            action = "BUY"
+        elif composite < -DECISION_THRESHOLD:
+            action = "SELL"
+        else:
+            action = "HOLD"
+
+        correct = False
+        if action == "BUY":
+            n_buy += 1
+            if actual > 0:
+                correct = True
+                wins += 1
+            total_return += actual
+        elif action == "SELL":
+            n_sell += 1
+            if actual < 0:
+                correct = True
+                wins += 1
+            total_return += -actual  # gain d'une position vendeuse
+        else:
+            n_hold += 1
+
+        sum_pred += predicted
+        sum_actual += actual
+        trades.append(BacktestTrade(
+            index=t, action=action,
+            predicted_return=predicted, actual_return=actual, correct=correct,
+        ))
+
+    n_directional = n_buy + n_sell
+    n_points = len(valid_idx)
+    win_rate = wins / n_directional if n_directional > 0 else 0.0
+    sample = trades[-max_points:]
+
+    return BacktestResult(
+        symbol=symbol,
+        horizon=horizon,
+        n_points=n_points,
+        n_buy=n_buy,
+        n_sell=n_sell,
+        n_hold=n_hold,
+        win_rate=win_rate,
+        total_return=total_return,
+        avg_predicted=sum_pred / n_points,
+        avg_actual=sum_actual / n_points,
+        trades=sample,
+    )

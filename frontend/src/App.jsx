@@ -47,6 +47,7 @@ const IaDashboard = lazy(() => import("./pages/ia/IaDashboard.jsx"));
 const PredictionPage = lazy(() => import("./pages/ia/PredictionPage.jsx"));
 const SentimentPage = lazy(() => import("./pages/ia/SentimentPage.jsx"));
 const AgentPage = lazy(() => import("./pages/ia/AgentPage.jsx"));
+const BacktestPage = lazy(() => import("./pages/ia/BacktestPage.jsx"));
 
 function PrivateShell() {
   return (
@@ -103,6 +104,7 @@ export default function App() {
           <Route path="prediction" element={<PredictionPage />} />
           <Route path="sentiment" element={<SentimentPage />} />
           <Route path="agent" element={<AgentPage />} />
+          <Route path="backtest" element={<BacktestPage />} />
         </Route>
         <Route path="/stress-testing" element={<StressPage />} />
         <Route path="/actuariat" element={<ActuarialLayout />}>

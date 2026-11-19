@@ -24,6 +24,14 @@ const ICONS = {
       <path d="M2 14h2M20 14h2" />
     </svg>
   ),
+  backtest: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <rect x="7" y="12" width="3" height="5" fill="currentColor" stroke="none" />
+      <rect x="12" y="9" width="3" height="8" fill="currentColor" stroke="none" />
+      <rect x="17" y="6" width="3" height="11" fill="currentColor" stroke="none" />
+    </svg>
+  ),
 };
 
 const CARDS = [
@@ -44,6 +52,12 @@ const CARDS = [
     title: "Agent de trading",
     desc: "Policy combinant prédiction (50%), technique (30%) et sentiment (20%). Signal BUY / SELL / HOLD avec score de confiance.",
     icon: "agent",
+  },
+  {
+    to: "/ia/backtest",
+    title: "Backtest de stratégie",
+    desc: "Simule l'agent sur l'historique passé : taux de réussite des signaux, rendement cumulé et rendement prédit vs réel.",
+    icon: "backtest",
   },
 ];
 
@@ -102,7 +116,19 @@ export default function IaDashboard() {
         ))}
       </div>
 
-      
+      <div className="ia-note">
+        <h3>À propos du module IA</h3>
+        <p>
+          Ce module répond au cahier des charges : « exploiter l'intelligence
+          artificielle pour réaliser des analyses, des prédictions et des
+          recommandations ». Les modèles sont entraînés à la demande sur la
+          table <code>price_history</code> et mis en cache en mémoire. La page
+          Prédiction affiche l'importance des features (quelles variables
+          pèsent le plus), et la page Backtest mesure la qualité de la
+          stratégie sur l'historique passé. L'explainability avancée (SHAP)
+          reste une évolution future.
+        </p>
+      </div>
     </div>
   );
 }

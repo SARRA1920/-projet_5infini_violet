@@ -68,3 +68,44 @@ class RetrainOut(BaseModel):
     symbol: str
     n_samples: int
     message: str
+
+
+class FeatureImportanceItemOut(BaseModel):
+    """Une feature et son importance (somme des importances = 1)."""
+
+    name: str
+    importance: float = Field(..., description="Importance normalisée (somme = 1)")
+
+
+class FeatureImportanceOut(BaseModel):
+    """Importance des features du modèle RandomForest pour un actif."""
+
+    symbol: str
+    horizon: int
+    features: list[FeatureImportanceItemOut]
+
+
+class BacktestTradeOut(BaseModel):
+    """Un trade simulé du backtest."""
+
+    index: int
+    action: str = Field(..., description="'BUY' | 'SELL' | 'HOLD'")
+    predicted_return: float
+    actual_return: float
+    correct: bool = Field(..., description="Le sens prédit correspond-il au sens réel ?")
+
+
+class BacktestOut(BaseModel):
+    """Résultat du backtest de la stratégie d'agent."""
+
+    symbol: str
+    horizon: int
+    n_points: int = Field(..., description="Nombre de jours évalués")
+    n_buy: int
+    n_sell: int
+    n_hold: int
+    win_rate: float = Field(..., description="Taux de réussite des signaux directionnels")
+    total_return: float
+    avg_predicted: float
+    avg_actual: float
+    trades: list[BacktestTradeOut]
