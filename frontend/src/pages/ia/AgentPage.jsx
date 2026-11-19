@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "../../services/api.js";
 import { iaApi } from "../../services/ia.js";
 import {
   fmtPct,
@@ -11,6 +12,14 @@ import {
 export default function AgentPage() {
   const [symbol, setSymbol] = useState("AAPL");
   const [horizon, setHorizon] = useState(5);
+  const [assets, setAssets] = useState([]);
+
+  // Liste des actifs disponibles (ceux qui ont un cours en base) pour le menu déroulant.
+  useEffect(() => {
+    api("/quotes")
+      .then(setAssets)
+      .catch(() => {});
+  }, []);
   const [decision, setDecision] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +44,14 @@ export default function AgentPage() {
       <form className="ia-form" onSubmit={runAgent}>
         <label>
           Symbole
-          <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="AAPL" required />
+          <select value={symbol} onChange={(e) => setSymbol(e.target.value)} required>
+            {assets.length === 0 && <option value="">Chargement des actifs…</option>}
+            {assets.map((a) => (
+              <option key={a.symbol} value={a.symbol}>
+                {a.symbol} — {a.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Horizon
