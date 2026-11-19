@@ -4,6 +4,7 @@ import AppShell from "./components/AppShell.jsx";
 import GuestRoute from "./components/GuestRoute.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import ActuarialLayout from "./pages/actuariat/ActuarialLayout.jsx";
+import IaLayout from "./pages/ia/IaLayout.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import {
   AdminAudit,
@@ -40,6 +41,13 @@ const FixedIncomePage = lazy(() => import("./pages/actuariat/FixedIncomePage.jsx
 const OptimizationPage = lazy(() => import("./pages/actuariat/OptimizationPage.jsx"));
 const LossModelingPage = lazy(() => import("./pages/actuariat/LossModelingPage.jsx"));
 const ModelLabPage = lazy(() => import("./pages/actuariat/ModelLabPage.jsx"));
+
+// Module IA chargé à la demande (recharts sur la page prédiction).
+const IaDashboard = lazy(() => import("./pages/ia/IaDashboard.jsx"));
+const PredictionPage = lazy(() => import("./pages/ia/PredictionPage.jsx"));
+const SentimentPage = lazy(() => import("./pages/ia/SentimentPage.jsx"));
+const AgentPage = lazy(() => import("./pages/ia/AgentPage.jsx"));
+const BacktestPage = lazy(() => import("./pages/ia/BacktestPage.jsx"));
 
 function PrivateShell() {
   return (
@@ -91,16 +99,13 @@ export default function App() {
         <Route path="/trading" element={<TradingPage />} />
         <Route path="/portefeuille" element={<PortfolioPage />} />
         <Route path="/analyse" element={<AnalysisPage />} />
-        <Route
-          path="/ia"
-          element={
-            <ModulePage
-              crumb="TradeLab / Intelligence"
-              title="IA & Prédictions"
-              lead="Prédiction, agent de trading et analyse de sentiment."
-            />
-          }
-        />
+        <Route path="/ia" element={<IaLayout />}>
+          <Route index element={<IaDashboard />} />
+          <Route path="prediction" element={<PredictionPage />} />
+          <Route path="sentiment" element={<SentimentPage />} />
+          <Route path="agent" element={<AgentPage />} />
+          <Route path="backtest" element={<BacktestPage />} />
+        </Route>
         <Route path="/stress-testing" element={<StressPage />} />
         <Route path="/actuariat" element={<ActuarialLayout />}>
           <Route index element={<ActuarialDashboard />} />
