@@ -1,0 +1,447 @@
+/* Module IA — styles spécifiques.
+   Les classes partagées (page, page-head, page-kicker, page-lead, banner,
+   metric) viennent de shell.css et actuariat.css. */
+
+.ia-page .ia-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border, #e0e0e0);
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.ia-page .ia-tabs a {
+  padding: 0.6rem 1rem;
+  text-decoration: none;
+  color: var(--muted, #6f7d92);
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ia-page .ia-tabs a:hover {
+  color: var(--text, #2c3e50);
+}
+.ia-page .ia-tabs a.active {
+  color: #2980b9;
+  border-bottom-color: #2980b9;
+  font-weight: 600;
+}
+
+/* ---- Tableau de bord ---- */
+.ia-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.ia-status h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+.status-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.status-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface, #f8f9fb);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.status-list em {
+  font-style: normal;
+  font-weight: 600;
+}
+.status-list em.ok {
+  color: #16a085;
+}
+.status-list em.ko {
+  color: #c0392b;
+}
+
+.ia-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.ia-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.ia-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.ia-card-icon {
+  font-size: 1.75rem;
+}
+.ia-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.ia-card p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted, #6f7d92);
+  line-height: 1.5;
+}
+.ia-card-link {
+  margin-top: auto;
+  color: #2980b9;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ia-note {
+  padding: 1rem 1.25rem;
+  background: #eef5fc;
+  border-left: 3px solid #2980b9;
+  border-radius: 8px;
+}
+.ia-note h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.ia-note p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.ia-note code {
+  background: #fff;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* ---- Formulaires et sections ---- */
+.ia-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.ia-panel {
+  padding: 1.25rem;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 12px;
+}
+.ia-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+.ia-help {
+  font-size: 0.875rem;
+  color: var(--muted, #6f7d92);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+.ia-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.ia-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted, #6f7d92);
+}
+.ia-form input,
+.ia-form select,
+.ia-form textarea {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border, #d0d5dd);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  min-width: 120px;
+  background: #fff;
+}
+.ia-form textarea {
+  min-width: 320px;
+  width: 100%;
+  resize: vertical;
+}
+.ia-form button {
+  padding: 0.55rem 1.2rem;
+  background: #2980b9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ia-form button:hover:not(:disabled) {
+  background: #1f6391;
+}
+.ia-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Métriques ---- */
+.ia-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface, #f8f9fb);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+}
+.metric-label {
+  font-size: 0.8rem;
+  color: var(--muted, #6f7d92);
+}
+.metric-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.metric-value.up {
+  color: #16a085;
+}
+.metric-value.down {
+  color: #c0392b;
+}
+
+/* ---- Graphique prédiction ---- */
+.ia-chart {
+  padding: 1rem;
+  background: var(--surface, #f8f9fb);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+}
+.ia-chart h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.ia-chart-note {
+  font-size: 0.825rem;
+  color: var(--muted, #6f7d92);
+  margin: 0.75rem 0 0;
+}
+
+/* ---- Sentiment ---- */
+.sentiment-result {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sentiment-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: #eee;
+  color: #555;
+}
+.sentiment-badge.up {
+  background: #d4f4dd;
+  color: #16a085;
+}
+.sentiment-badge.down {
+  background: #fde0dc;
+  color: #c0392b;
+}
+.sentiment-score {
+  font-size: 0.95rem;
+}
+.sentiment-score strong {
+  font-size: 1.1rem;
+}
+.sentiment-score strong.up {
+  color: #16a085;
+}
+.sentiment-score strong.down {
+  color: #c0392b;
+}
+.sentiment-bar {
+  height: 8px;
+  background: linear-gradient(90deg, #c0392b, #eee 50%, #16a085);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.sentiment-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(41, 128, 185, 0.25);
+  border-right: 2px solid #2980b9;
+}
+.sentiment-source {
+  font-size: 0.8rem;
+  color: var(--muted, #6f7d92);
+}
+.headline-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.headline-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface, #f8f9fb);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.headline-list em {
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.headline-list em.up {
+  color: #16a085;
+}
+.headline-list em.down {
+  color: #c0392b;
+}
+
+/* ---- Agent ---- */
+.agent-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.agent-action {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  background: #eee;
+  color: #555;
+}
+.agent-action.up {
+  background: #d4f4dd;
+  color: #16a085;
+}
+.agent-action.down {
+  background: #fde0dc;
+  color: #c0392b;
+}
+.agent-action .action-label {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.agent-action .action-symbol {
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.agent-reasons h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.reason-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.reason-list li {
+  display: grid;
+  grid-template-columns: 100px 1fr 70px;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface, #f8f9fb);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.reason-signal {
+  font-weight: 700;
+  color: #2980b9;
+  text-transform: capitalize;
+}
+.reason-detail {
+  color: var(--text, #2c3e50);
+}
+.reason-contrib {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.reason-contrib.up {
+  color: #16a085;
+}
+.reason-contrib.down {
+  color: #c0392b;
+}
+.reason-total {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: #eef5fc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.reason-total strong {
+  font-size: 1.1rem;
+}
+.reason-total strong.up {
+  color: #16a085;
+}
+.reason-total strong.down {
+  color: #c0392b;
+}
+.reason-threshold {
+  font-size: 0.8rem;
+  color: var(--muted, #6f7d92);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+  .ia-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ia-form input,
+  .ia-form select {
+    min-width: 0;
+    width: 100%;
+  }
+  .reason-list li {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .reason-contrib {
+    text-align: left;
+  }
+}

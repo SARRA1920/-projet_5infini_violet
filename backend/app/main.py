@@ -9,6 +9,7 @@ from app.api.formation import router as formation_router
 from app.api.quotes import router as quotes_router
 from app.api.stress import router as stress_router
 from app.api.trading import router as trading_router
+from app.ia.api import router as ia_router
 
 app = FastAPI(title="Simulateur de Salle de Marché")
 
@@ -28,6 +29,7 @@ app.include_router(trading_router)
 app.include_router(admin_router)
 app.include_router(formation_router)
 app.include_router(actuarial_router)
+app.include_router(ia_router)
 
 
 @app.get("/health")

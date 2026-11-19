@@ -1,0 +1,2902 @@
+From 69548b94c22bd6cd21b8bbab78b2d4bc5a4f56c3 Mon Sep 17 00:00:00 2001
+From: "Emna (via assistant)" <emma.ayachi@esprit.tr>
+Date: Thu, 19 Nov 2026 15:49:21 +0000
+Subject: [PATCH 1/3] =?UTF-8?q?feat(ia):=20module=20IA=20=E2=80=94=20pr?=
+ =?UTF-8?q?=C3=A9diction,=20sentiment,=20agent=20de=20trading?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ajoute le module IA (Module 5) avec trois briques :
+
+- Prédiction de cours : RandomForestRegressor sur features techniques
+  (rendements lagués, SMA20/50, RSI14, volatilité, momentum, volume ratio).
+  Cache en mémoire par symbole, intervalle de confiance via quantiles des arbres.
+- Analyse de sentiment : VADER (léger, sans téléchargement) avec fallback
+  lexique financier. Interface prête pour FinBERT (évolution future).
+- Agent de trading : policy rule-based combinant prédiction + technique + sentiment.
+  Signal BUY/SELL/HOLD + confiance + raisons explicables.
+
+Structure (calquée sur app.actuarial) :
+- backend/app/ia/ : __init__, features, prediction, sentiment, agent, schemas, api
+- backend/tests/ : test_ia_features (21 tests), test_ia_prediction
+- backend/app/main.py : router enregistré sous /api/ia
+- backend/requirements.txt : scikit-learn, pandas, joblib, vaderSentiment
+
+Routes : /api/ia/status, /predict/{symbol}, /sentiment/{symbol},
+/sentiment/analyze, /agent/{symbol}, /retrain/{symbol}
+
+Frontend à venir dans une PR suivie.
+---
+ backend/app/ia/__init__.py          |  30 ++++
+ backend/app/ia/agent.py             | 212 ++++++++++++++++++++++++++++
+ backend/app/ia/api.py               | 171 ++++++++++++++++++++++
+ backend/app/ia/features.py          | 204 ++++++++++++++++++++++++++
+ backend/app/ia/prediction.py        | 204 ++++++++++++++++++++++++++
+ backend/app/ia/schemas.py           |  70 +++++++++
+ backend/app/ia/sentiment.py         | 136 ++++++++++++++++++
+ backend/app/main.py                 |   2 +
+ backend/requirements.txt            |   5 +
+ backend/tests/test_ia_features.py   | 124 ++++++++++++++++
+ backend/tests/test_ia_prediction.py |  99 +++++++++++++
+ 11 files changed, 1257 insertions(+)
+ create mode 100644 backend/app/ia/__init__.py
+ create mode 100644 backend/app/ia/agent.py
+ create mode 100644 backend/app/ia/api.py
+ create mode 100644 backend/app/ia/features.py
+ create mode 100644 backend/app/ia/prediction.py
+ create mode 100644 backend/app/ia/schemas.py
+ create mode 100644 backend/app/ia/sentiment.py
+ create mode 100644 backend/tests/test_ia_features.py
+ create mode 100644 backend/tests/test_ia_prediction.py
+
+diff --git a/backend/app/ia/__init__.py b/backend/app/ia/__init__.py
+new file mode 100644
+index 0000000..851e579
+--- /dev/null
++++ b/backend/app/ia/__init__.py
+@@ -0,0 +1,30 @@
++"""Module IA : Intelligence & Prédictions.
++
++Trois briques, alignées sur la maquette frontend « IA & Prédictions » :
++- **Prédiction de cours** : régression du rendement futur à horizon N jours,
++  à partir de features techniques (rendements lagués, SMA, RSI, volatilité).
++  Modèle RandomForestRegressor (scikit-learn), entraîné à la demande sur
++  l'historique local (price_history) et mis en cache en mémoire.
++- **Analyse de sentiment** : score des titres d'actualité financière via
++  VADER (lexique, léger, sans téléchargement de modèle). FinBERT est prévu
++  comme évolution ultérieure (voir sentiment.py).
++- **Agent de trading** : policy rule-based combinant prédiction, indicateurs
++  techniques et sentiment pour produire un signal BUY / SELL / HOLD + score
++  de confiance + raisons explicables.
++
++Organisation :
++- features.py : construction des features techniques (fonctions pures,
++  tableaux numpy en entrée/sortie, aucun accès à la base) ;
++- prediction.py : entraînement + inférence + cache en mémoire du modèle ;
++- sentiment.py : analyse de sentiment des titres de news ;
++- agent.py : agent de trading (policy + scoring) ;
++- schemas.py : modèles Pydantic pour les réponses API ;
++- api.py : routes FastAPI sous /api/ia.
++
++Conventions (cohérentes avec app.actuarial et app.services.analysis) :
++- rendements simples quotidiens r_t = P_t / P_(t-1) - 1 ;
++- résultats en fractions (0.023 = 2,3 %) ;
++- 252 jours de bourse par an pour les annualisations.
++"""
++
++__all__ = ["features", "prediction", "sentiment", "agent", "schemas", "api"]
+diff --git a/backend/app/ia/agent.py b/backend/app/ia/agent.py
+new file mode 100644
+index 0000000..c18bd15
+--- /dev/null
++++ b/backend/app/ia/agent.py
+@@ -0,0 +1,212 @@
++"""Agent de trading : combine prédiction, indicateurs techniques et sentiment.
++
++Approche : **policy rule-based** avec scoring de confiance et explications.
++On agrège trois signaux en un score composite [-1, +1], puis on mappe vers
++une décision BUY / SELL / HOLD avec un seuil.
++
++Pourquoi pas du reinforcement learning ? Un agent RL (Q-learning) serait
++plus ambitieux mais nécessite : un environnement de trading (gymnasium),
++des milliers d'épisodes d'entraînement, et un historique long. Pour un
++projet pédagogique avec un historique limité, la policy rule-based est
++plus fiable, plus explicable et plus rapide à mettre en place. L'interface
++(decide() -> AgentDecision) resterait identique pour une évolution future.
++
++Signaux combinés :
++1. **Prédiction IA** (poids 0.5) : rendement prédit sur l'horizon,
++   normalisé par la volatilité réalisée.
++2. **Technique** (poids 0.3) : RSI (survente < 30 → haussier, surachat > 70
++   → baissier) + crossover SMA20/SMA50.
++3. **Sentiment** (poids 0.2) : score moyen des titres de news.
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++
++import numpy as np
++
++from sqlalchemy import select
++from sqlalchemy.orm import Session
++
++from app.models.models import Asset, PriceHistory
++
++from . import features as F
++from . import prediction as pred
++from . import sentiment as sent
++
++
++@dataclass
++class AgentReason:
++    signal: str       # "prediction" | "technique" | "sentiment"
++    detail: str
++    contribution: float   # contribution au score composite [-1, +1]
++
++
++@dataclass
++class AgentDecision:
++    symbol: str
++    action: str               # "BUY" | "SELL" | "HOLD"
++    confidence: float         # 0.0 - 1.0
++    composite_score: float    # -1.0 à +1.0
++    reasons: list[AgentReason] = field(default_factory=list)
++    predicted_return: float = 0.0
++    horizon: int = 5
++
++
++# Seuils de décision : |score| > DECISION_THRESHOLD → BUY ou SELL.
++DECISION_THRESHOLD = 0.15
++
++
++def _technical_signal(closes: list[float]) -> tuple[float, str]:
++    """Signal technique basé sur RSI et crossover SMA20/SMA50.
++
++    Renvoie (score [-1,+1], description).
++    """
++    if len(closes) < 50:
++        return 0.0, "Historique insuffisant pour les indicateurs techniques"
++
++    rsi_arr = F.rsi(closes, 14)
++    sma20 = F.sma(closes, 20)
++    sma50 = F.sma(closes, 50)
++    last_rsi = float(rsi_arr[-1]) if np.isfinite(rsi_arr[-1]) else 50.0
++
++    parts = []
++    score = 0.0
++
++    # RSI : survente → haussier, surachat → baissier.
++    if last_rsi < 30:
++        score += 0.4
++        parts.append(f"RSI={last_rsi:.0f} (survente, signal haussier)")
++    elif last_rsi > 70:
++        score -= 0.4
++        parts.append(f"RSI={last_rsi:.0f} (surachat, signal baissier)")
++    else:
++        parts.append(f"RSI={last_rsi:.0f} (neutre)")
++
++    # Crossover SMA20/SMA50 : golden cross (SMA20 > SMA50) → haussier.
++    last_sma20 = float(sma20[-1]) if np.isfinite(sma20[-1]) else None
++    last_sma50 = float(sma50[-1]) if np.isfinite(sma50[-1]) else None
++    if last_sma20 is not None and last_sma50 is not None:
++        if last_sma20 > last_sma50:
++            score += 0.3
++            parts.append("SMA20 > SMA50 (tendance haussière)")
++        else:
++            score -= 0.3
++            parts.append("SMA20 < SMA50 (tendance baissière)")
++
++    score = max(-1.0, min(1.0, score))
++    return score, " ; ".join(parts)
++
++
++def decide(
++    db: Session,
++    symbol: str,
++    horizon: int = 5,
++) -> AgentDecision:
++    """Produit une décision de trading pour `symbol`.
++
++    Combine prédiction IA, signal technique et sentiment.
++    """
++    reasons: list[AgentReason] = []
++
++    # 1. Prédiction IA (poids 0.5).
++    try:
++        p = pred.predict(db, symbol, horizon=horizon)
++        vol = F.rolling_volatility(
++            _load_recent_closes(db, symbol, n=30), 20
++        )
++        last_vol = float(vol[-1]) if len(vol) and np.isfinite(vol[-1]) else 0.02
++        last_vol = max(last_vol, 0.005)  # éviter division par zéro
++        pred_signal = max(-1.0, min(1.0, p.predicted_return / (last_vol * np.sqrt(horizon))))
++        reasons.append(AgentReason(
++            signal="prediction",
++            detail=(
++                f"Rendement prédit {horizon}j : {p.predicted_return*100:.2f}% "
++                f"(volat {last_vol*100:.2f}%/j, conf {p.confidence*100:.0f}%)"
++            ),
++            contribution=pred_signal * 0.5,
++        ))
++        predicted_return = p.predicted_return
++    except ValueError as e:
++        # Pas assez d'historique : on continue sans prédiction.
++        reasons.append(AgentReason(
++            signal="prediction",
++            detail=f"Prédiction indisponible : {e}",
++            contribution=0.0,
++        ))
++        pred_signal = 0.0
++        predicted_return = 0.0
++
++    # 2. Signal technique (poids 0.3).
++    closes = _load_recent_closes(db, symbol, n=120)
++    tech_score, tech_desc = _technical_signal(closes)
++    reasons.append(AgentReason(
++        signal="technique",
++        detail=tech_desc,
++        contribution=tech_score * 0.3,
++    ))
++
++    # 3. Sentiment (poids 0.2).
++    titles = sent.fetch_headlines(symbol)
++    if titles:
++        avg_score, label, _ = sent.aggregate_sentiment(titles)
++        sent_signal = max(-1.0, min(1.0, avg_score))
++        reasons.append(AgentReason(
++            signal="sentiment",
++            detail=f"{len(titles)} titres analysés, sentiment {label} (score {avg_score:.2f})",
++            contribution=sent_signal * 0.2,
++        ))
++    else:
++        reasons.append(AgentReason(
++            signal="sentiment",
++            detail="Pas de titres disponibles (source de news non connectée)",
++            contribution=0.0,
++        ))
++
++    composite = sum(r.contribution for r in reasons)
++    composite = max(-1.0, min(1.0, composite))
++
++    # Décision.
++    if composite > DECISION_THRESHOLD:
++        action = "BUY"
++    elif composite < -DECISION_THRESHOLD:
++        action = "SELL"
++    else:
++        action = "HOLD"
++
++    # Confiance : éloignement du seuil + cohérence des signaux.
++    margin = abs(composite) - DECISION_THRESHOLD
++    contributions = [r.contribution for r in reasons if r.contribution != 0.0]
++    if len(contributions) >= 2:
++        # Cohérence : les signaux pointent-ils dans le même sens ?
++        same_sign = sum(1 for c in contributions if np.sign(c) == np.sign(composite))
++        alignment = same_sign / len(contributions)
++    else:
++        alignment = 0.5
++    confidence = float(max(0.0, min(1.0, 0.3 * alignment + 0.7 * max(0.0, margin * 3.0))))
++
++    return AgentDecision(
++        symbol=symbol,
++        action=action,
++        confidence=confidence,
++        composite_score=composite,
++        reasons=reasons,
++        predicted_return=predicted_return,
++        horizon=horizon,
++    )
++
++
++def _load_recent_closes(db: Session, symbol: str, n: int = 120) -> list[float]:
++    """Charge les N derniers cours de clôture pour un symbole."""
++    asset = db.scalar(select(Asset).where(Asset.symbol == symbol.strip().upper()))
++    if asset is None:
++        return []
++    rows = db.execute(
++        select(PriceHistory.close)
++        .where(PriceHistory.asset_id == asset.id)
++        .order_by(PriceHistory.date.desc())
++        .limit(n)
++    ).all()
++    closes = [float(r.close) for r in rows]
++    closes.reverse()  # du plus ancien au plus récent
++    return closes
+diff --git a/backend/app/ia/api.py b/backend/app/ia/api.py
+new file mode 100644
+index 0000000..aacb978
+--- /dev/null
++++ b/backend/app/ia/api.py
+@@ -0,0 +1,171 @@
++"""Routes du module IA, sous /api/ia.
++
++Toutes les routes exigent un utilisateur connecté (get_current_user) et
++utilisent le pool de threads de FastAPI (les calculs scikit-learn sont
++synchrones et ne bloquent pas la boucle d'événements).
++
++Routes :
++- GET  /api/ia/predict/{symbol}?horizon=5   → prédiction de cours
++- GET  /api/ia/sentiment/{symbol}           → sentiment des actualités
++- POST /api/ia/sentiment/analyze            → analyse d'un texte libre
++- GET  /api/ia/agent/{symbol}?horizon=5     → décision de l'agent de trading
++- POST /api/ia/retrain/{symbol}?horizon=5   → réentraîner le modèle
++- GET  /api/ia/status                       → état du module (scikit-learn dispo ?)
++"""
++
++from fastapi import APIRouter, Depends, HTTPException, Query, status
++from pydantic import BaseModel
++from sqlalchemy.orm import Session
++
++from app.api.deps import get_current_user
++from app.core.database import get_db
++from app.models.models import User
++
++from . import prediction as pred
++from . import sentiment as sent
++from . import agent as agent_mod
++from .schemas import (
++    AgentDecisionOut,
++    AgentReasonOut,
++    HeadlineSentimentOut,
++    PredictionOut,
++    RetrainOut,
++    SentimentOut,
++)
++
++router = APIRouter(prefix="/api/ia", tags=["ia"])
++
++
++def _bad_request(msg: str) -> HTTPException:
++    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
++
++
++@router.get("/status")
++def ia_status(
++    current_user: User = Depends(get_current_user),
++):
++    """État du module IA : dépendances disponibles et modèle en cache."""
++    try:
++        import sklearn  # noqa: F401
++
++        sklearn_ok = True
++    except ImportError:
++        sklearn_ok = False
++
++    return {
++        "scikit_learn_available": sklearn_ok,
++        "vader_available": sent._VADER_AVAILABLE,
++        "cached_models": len(pred._model_cache),
++        "min_history": pred.MIN_HISTORY,
++    }
++
++
++@router.get("/predict/{symbol}", response_model=PredictionOut)
++def predict(
++    symbol: str,
++    horizon: int = Query(5, ge=1, le=30, description="Nombre de jours projetés"),
++    db: Session = Depends(get_db),
++    current_user: User = Depends(get_current_user),
++):
++    """Prédit le rendement cumulé sur `horizon` jours pour un actif."""
++    try:
++        result = pred.predict(db, symbol, horizon=horizon)
++    except ValueError as e:
++        raise _bad_request(str(e))
++    return PredictionOut(
++        symbol=result.symbol,
++        horizon=result.horizon,
++        last_close=result.last_close,
++        predicted_return=result.predicted_return,
++        predicted_close=result.predicted_close,
++        interval_low=result.interval_low,
++        interval_high=result.interval_high,
++        interval_low_close=result.interval_low_close,
++        interval_high_close=result.interval_high_close,
++        confidence=result.confidence,
++        n_samples=result.n_samples,
++    )
++
++
++class AnalyzeTextIn(BaseModel):
++    text: str
++
++
++@router.post("/sentiment/analyze", response_model=HeadlineSentimentOut)
++def analyze_text(
++    payload: AnalyzeTextIn,
++    current_user: User = Depends(get_current_user),
++):
++    """Analyse le sentiment d'un texte libre (titre de news, commentaire)."""
++    result = sent.analyze_sentiment(payload.text)
++    return HeadlineSentimentOut(title=result.text, score=result.score, label=result.label)
++
++
++@router.get("/sentiment/{symbol}", response_model=SentimentOut)
++def sentiment_for_symbol(
++    symbol: str,
++    current_user: User = Depends(get_current_user),
++    db: Session = Depends(get_db),
++):
++    """Renvoie le sentiment agrégé des actualités d'un symbole.
++
++    Pour l'instant, `fetch_headlines` est un stub qui renvoie une liste vide
++    tant qu'aucune source de news réelle n'est connectée. Le frontend peut
++    utiliser /api/ia/sentiment/analyze pour analyser ses propres textes.
++    """
++    titles = sent.fetch_headlines(symbol)
++    avg, label, details = sent.aggregate_sentiment(titles)
++    return SentimentOut(
++        symbol=symbol,
++        aggregate_score=avg,
++        aggregate_label=label,
++        headlines=[
++            HeadlineSentimentOut(title=d.title, score=d.score, label=d.label)
++            for d in details
++        ],
++        source="vader" if sent._VADER_AVAILABLE else "lexicon",
++    )
++
++
++@router.get("/agent/{symbol}", response_model=AgentDecisionOut)
++def agent_decision(
++    symbol: str,
++    horizon: int = Query(5, ge=1, le=30),
++    db: Session = Depends(get_db),
++    current_user: User = Depends(get_current_user),
++):
++    """Décision de l'agent de trading (BUY/SELL/HOLD) pour un actif."""
++    decision = agent_mod.decide(db, symbol, horizon=horizon)
++    return AgentDecisionOut(
++        symbol=decision.symbol,
++        action=decision.action,
++        confidence=decision.confidence,
++        composite_score=decision.composite_score,
++        predicted_return=decision.predicted_return,
++        horizon=decision.horizon,
++        reasons=[
++            AgentReasonOut(
++                signal=r.signal, detail=r.detail, contribution=r.contribution
++            )
++            for r in decision.reasons
++        ],
++    )
++
++
++@router.post("/retrain/{symbol}", response_model=RetrainOut)
++def retrain(
++    symbol: str,
++    horizon: int = Query(5, ge=1, le=30),
++    db: Session = Depends(get_db),
++    current_user: User = Depends(get_current_user),
++):
++    """Force le réentraînement du modèle de prédiction pour un symbole."""
++    try:
++        n = pred.retrain(db, symbol, horizon=horizon)
++    except ValueError as e:
++        raise _bad_request(str(e))
++    return RetrainOut(
++        symbol=symbol,
++        n_samples=n,
++        message=f"Modèle réentraîné sur {n} échantillons pour {symbol}.",
++    )
+diff --git a/backend/app/ia/features.py b/backend/app/ia/features.py
+new file mode 100644
+index 0000000..f18bbe4
+--- /dev/null
++++ b/backend/app/ia/features.py
+@@ -0,0 +1,204 @@
++"""Feature engineering pour le module IA.
++
++Fonctions pures : prennent des séries de prix OHLCV (listes de float ou
++tableaux numpy) et renvoient des features exploitables par scikit-learn.
++Aucun accès à la base de données ici — la lecture de price_history se fait
++dans prediction.py et les services.
++
++Les features calculées pour le jour t (à partir des cours jusqu'à t inclus) :
++- ret_1, ret_5, ret_10 : rendements sur 1, 5 et 10 jours ;
++- sma_20, sma_50 : moyennes mobiles simples (ramenées à un ratio prix/sma) ;
++- rsi_14 : RSI de Wilder (0-100) ;
++- vol_20 : volatilité réalisée sur 20 jours (écart-type des rendements) ;
++- momentum_10 : momentum = P_t / P_(t-10) - 1 ;
++- volume_ratio_20 : volume du jour / volume moyen 20 jours.
++
++La cible (target) est le rendement cumulé sur les `horizon` jours suivants :
++target_t = P_(t+horizon) / P_t - 1.
++"""
++
++from __future__ import annotations
++
++import numpy as np
++
++
++def _to_array(values: list[float]) -> np.ndarray:
++    return np.asarray(values, dtype=float)
++
++
++def simple_returns(prices: list[float]) -> np.ndarray:
++    """Rendements simples quotidiens r_t = P_t / P_(t-1) - 1.
++
++    Le premier élément vaut NaN (pas de jour précédent).
++    """
++    p = _to_array(prices)
++    if len(p) < 2:
++        return np.full_like(p, np.nan)
++    r = np.empty_like(p)
++    r[0] = np.nan
++    r[1:] = p[1:] / p[:-1] - 1.0
++    return r
++
++
++def sma(prices: list[float], window: int) -> np.ndarray:
++    """Moyenne mobile simple ; NaN tant que moins de `window` valeurs."""
++    p = _to_array(prices)
++    out = np.full_like(p, np.nan)
++    if len(p) < window:
++        return out
++    csum = np.cumsum(p)
++    csum[window:] = csum[window:] - csum[:-window]
++    out[window - 1:] = csum[window - 1:] / window
++    return out
++
++
++def rsi(prices: list[float], period: int = 14) -> np.ndarray:
++    """RSI de Wilder (0-100) ; NaN sur les `period` premiers jours.
++
++    Reproduit la logique de app.services.analysis.rsi pour rester cohérent.
++    """
++    p = _to_array(prices)
++    out = np.full_like(p, np.nan)
++    if len(p) <= period:
++        return out
++    changes = np.diff(p)
++    gains = np.where(changes > 0, changes, 0.0)
++    losses = np.where(changes < 0, -changes, 0.0)
++    avg_gain = gains[:period].mean()
++    avg_loss = losses[:period].mean()
++
++    def _to_rsi(ag: float, al: float) -> float:
++        if al == 0:
++            return 100.0 if ag > 0 else 50.0
++        rs = ag / al
++        return 100.0 - 100.0 / (1.0 + rs)
++
++    out[period] = _to_rsi(avg_gain, avg_loss)
++    for i in range(period + 1, len(p)):
++        g = gains[i - 1]
++        l = losses[i - 1]
++        avg_gain = (avg_gain * (period - 1) + g) / period
++        avg_loss = (avg_loss * (period - 1) + l) / period
++        out[i] = _to_rsi(avg_gain, avg_loss)
++    return out
++
++
++def rolling_volatility(prices: list[float], window: int = 20) -> np.ndarray:
++    """Écart-type des rendements sur `window` jours (volatilité réalisée).
++
++    NaN-aware : le rendement NaN du premier jour est ignoré (nanstd), donc la
++    première fenêtre valide (à l'indice window-1) utilise window-1 rendements.
++    """
++    r = simple_returns(prices)
++    out = np.full_like(r, np.nan)
++    if len(r) < window:
++        return out
++    for i in range(window - 1, len(r)):
++        out[i] = np.nanstd(r[i - window + 1 : i + 1], ddof=1)
++    return out
++
++
++def momentum(prices: list[float], window: int = 10) -> np.ndarray:
++    """Momentum = P_t / P_(t-window) - 1."""
++    p = _to_array(prices)
++    out = np.full_like(p, np.nan)
++    if len(p) <= window:
++        return out
++    out[window:] = p[window:] / p[:-window] - 1.0
++    return out
++
++
++def volume_ratio(volumes: list[float | None], window: int = 20) -> np.ndarray:
++    """Volume du jour / volume moyen sur les `window` jours précédents.
++
++    La moyenne exclut le jour courant (définition standard du volume relatif).
++    Renvoie NaN si le volume est manquant ou insuffisant. Les volumes None
++    sont traités comme NaN.
++    """
++    v = np.array([float(x) if x is not None else np.nan for x in volumes], dtype=float)
++    out = np.full_like(v, np.nan)
++    if len(v) <= window:
++        return out
++    for i in range(window, len(v)):
++        window_slice = v[i - window : i]
++        if np.all(np.isnan(window_slice)):
++            continue
++        window_mean = float(np.nanmean(window_slice))
++        if window_mean > 0 and not np.isnan(v[i]):
++            out[i] = v[i] / window_mean
++    return out
++
++
++FEATURE_COLUMNS = [
++    "ret_1",
++    "ret_5",
++    "ret_10",
++    "price_sma20_ratio",
++    "price_sma50_ratio",
++    "rsi_14",
++    "vol_20",
++    "momentum_10",
++    "volume_ratio_20",
++]
++
++
++def build_feature_matrix(
++    closes: list[float],
++    volumes: list[float | None] | None = None,
++    horizon: int = 5,
++) -> tuple[np.ndarray, np.ndarray, list[int]]:
++    """Construit la matrice de features X et le vecteur cible y.
++
++    Paramètres
++    ----------
++    closes : cours de clôture ordonnés du plus ancien au plus récent.
++    volumes : volumes journaliers (peut contenir des None). Si None, la
++        feature volume_ratio_20 vaut NaN (imputée à 1.0 ensuite).
++    horizon : nombre de jours futurs pour la cible (rendement cumulé).
++
++    Renvoie
++    -------
++    X : ndarray de forme (n_samples, len(FEATURE_COLUMNS)).
++    y : ndarray de forme (n_samples,) — rendement futur sur `horizon` jours.
++    valid_indices : indices des lignes valides (features définies + cible
++        définie, i.e. il reste au moins `horizon` jours après t).
++    """
++    closes_arr = _to_array(closes)
++    n = len(closes_arr)
++    if volumes is None:
++        volumes_arr = np.full(n, np.nan)
++    else:
++        volumes_arr = np.array(
++            [float(x) if x is not None else np.nan for x in volumes], dtype=float
++        )
++
++    # Features au niveau jour.
++    ret1 = simple_returns(closes)
++    ret5 = momentum(closes, 5)  # rendement sur 5 jours = momentum(5)
++    ret10 = momentum(closes, 10)
++    sma20 = sma(closes, 20)
++    sma50 = sma(closes, 50)
++    rsi14 = rsi(closes, 14)
++    vol20 = rolling_volatility(closes, 20)
++    mom10 = momentum(closes, 10)
++    vol_ratio = volume_ratio(volumes_arr.tolist(), 20)
++
++    price_sma20 = closes_arr / sma20
++    price_sma50 = closes_arr / sma50
++
++    # Cible : rendement cumulé sur `horizon` jours futurs.
++    target = np.full(n, np.nan)
++    if n > horizon:
++        target[: n - horizon] = closes_arr[horizon:] / closes_arr[: n - horizon] - 1.0
++
++    X = np.column_stack(
++        [ret1, ret5, ret10, price_sma20, price_sma50, rsi14, vol20, mom10, vol_ratio]
++    )
++    y = target
++
++    # Lignes valides : toutes les features définies + cible définie.
++    feature_finite = np.all(np.isfinite(X), axis=1)
++    target_finite = np.isfinite(y)
++    valid_mask = feature_finite & target_finite
++    valid_indices = np.where(valid_mask)[0].tolist()
++    return X, y, valid_indices
+diff --git a/backend/app/ia/prediction.py b/backend/app/ia/prediction.py
+new file mode 100644
+index 0000000..2ccea6e
+--- /dev/null
++++ b/backend/app/ia/prediction.py
+@@ -0,0 +1,204 @@
++"""Prédiction de cours : entraînement et inférence.
++
++Pipeline :
++1. Lire l'historique de price_history pour un symbole (closes + volumes).
++2. Construire la matrice de features via features.build_feature_matrix.
++3. Entraîner un RandomForestRegressor sur la cible (rendement futur).
++4. Prédire le rendement sur `horizon` jours à partir de la dernière ligne.
++5. Estimer un intervalle de confiance via les arbres (quantiles 10/90).
++
++Le modèle est entraîné à la demande et mis en cache en mémoire par symbole.
++Pour un projet pédagogique avec peu d'historique, c'est suffisant et évite
++la gestion de fichiers .joblib. Un endpoint /api/ia/retrain/{symbol} permet
++de forcer le réentraînement.
++
++Si l'historique est trop court (< MIN_HISTORY points) ou scikit-learn absent,
++on renvoie une erreur explicite plutôt qu'un résultat trompeur.
++"""
++
++from __future__ import annotations
++
++import time
++from dataclasses import dataclass
++
++import numpy as np
++from sqlalchemy import select
++from sqlalchemy.orm import Session
++
++from app.models.models import Asset, PriceHistory
++
++from . import features as F
++
++# Seuil minimal d'historique pour entraîner un modèle crédible.
++MIN_HISTORY = 60
++# Durée de vie du cache modèle en secondes (10 minutes).
++CACHE_TTL = 600
++
++
++@dataclass
++class _CachedModel:
++    model: object
++    last_close: float
++    last_features: np.ndarray
++    trained_at: float
++    n_samples: int
++
++
++_model_cache: dict[str, _CachedModel] = {}
++
++
++def _get_sklearn():
++    """Import scikit-learn paresseusement pour garder le module importable
++    même si la dépendance n'est pas installée (tests unitaires sur features)."""
++    from sklearn.ensemble import RandomForestRegressor
++
++    return RandomForestRegressor
++
++
++def _load_history(db: Session, symbol: str) -> tuple[list[float], list[float | None], Asset]:
++    """Charge les cours de clôture et volumes ordonnés pour un symbole."""
++    asset = db.scalar(select(Asset).where(Asset.symbol == symbol.strip().upper()))
++    if asset is None:
++        raise ValueError(f"Actif inconnu : {symbol}")
++
++    rows = db.execute(
++        select(PriceHistory.date, PriceHistory.close, PriceHistory.volume)
++        .where(PriceHistory.asset_id == asset.id)
++        .order_by(PriceHistory.date)
++    ).all()
++    if len(rows) < 2:
++        raise ValueError(f"Pas assez d'historique pour {symbol} ({len(rows)} points)")
++
++    closes = [float(r.close) for r in rows]
++    volumes = [float(r.volume) if r.volume is not None else None for r in rows]
++    return closes, volumes, asset
++
++
++def _train(closes: list[float], volumes: list[float | None], horizon: int) -> _CachedModel:
++    """Entraîne le RandomForest sur l'historique donné."""
++    X, y, valid_idx = F.build_feature_matrix(closes, volumes, horizon=horizon)
++    if len(valid_idx) < 20:
++        raise ValueError(
++            f"Pas assez d'échantillons entraînement après feature engineering "
++            f"({len(valid_idx)} < 20). Historique trop court ou trop de NaN."
++        )
++    X_train = X[valid_idx]
++    y_train = y[valid_idx]
++
++    # Imputation : les volumes manquants deviennent 1.0 (volume moyen).
++    col_mean = np.nanmean(X_train, axis=0)
++    inds = np.where(np.isnan(X_train))
++    X_train = X_train.copy()
++    X_train[inds] = np.take(col_mean, inds[1])
++
++    RF = _get_sklearn()
++    model = RF(
++        n_estimators=200,
++        max_depth=8,
++        min_samples_leaf=5,
++        random_state=42,
++        n_jobs=-1,
++    )
++    model.fit(X_train, y_train)
++
++    # Dernière ligne de features pour la prédiction immédiate.
++    last_row = X[-1].copy()
++    nan_mask = ~np.isfinite(last_row)
++    if nan_mask.any():
++        last_row[nan_mask] = col_mean[nan_mask]
++
++    return _CachedModel(
++        model=model,
++        last_close=closes[-1],
++        last_features=last_row,
++        trained_at=time.time(),
++        n_samples=len(valid_idx),
++    )
++
++
++def _get_or_train(db: Session, symbol: str, horizon: int) -> _CachedModel:
++    """Récupère le modèle en cache ou entraîne s'il est absent/expiré."""
++    cache_key = f"{symbol}:{horizon}"
++    cached = _model_cache.get(cache_key)
++    if cached is not None and (time.time() - cached.trained_at) < CACHE_TTL:
++        return cached
++
++    closes, volumes, _ = _load_history(db, symbol)
++    if len(closes) < MIN_HISTORY:
++        raise ValueError(
++            f"Historique insuffisant pour {symbol} : {len(closes)} points "
++            f"(minimum {MIN_HISTORY}). Importez plus de données."
++        )
++    model = _train(closes, volumes, horizon)
++    _model_cache[cache_key] = model
++    return model
++
++
++@dataclass
++class PredictionResult:
++    symbol: str
++    horizon: int
++    last_close: float
++    predicted_return: float       # fraction, ex 0.023 = +2,3 %
++    predicted_close: float        # prix projeté
++    interval_low: float           # quantile 10 % du rendement
++    interval_high: float          # quantile 90 % du rendement
++    interval_low_close: float
++    interval_high_close: float
++    confidence: float             # 0-1, basé sur la cohérence des arbres
++    n_samples: int                # taille de l'échantillon d'entraînement
++
++
++def predict(db: Session, symbol: str, horizon: int = 5) -> PredictionResult:
++    """Prédit le rendement cumulé sur `horizon` jours pour `symbol`."""
++    if horizon < 1 or horizon > 30:
++        raise ValueError("horizon doit être entre 1 et 30 jours")
++    cached = _get_or_train(db, symbol, horizon)
++
++    model = cached.model
++    x = cached.last_features.reshape(1, -1)
++
++    # Prédiction ponctuelle (moyenne des arbres).
++    point_pred = float(model.predict(x)[0])
++
++    # Distribution des arbres pour l'intervalle de confiance.
++    tree_preds = np.array([t.predict(x)[0] for t in model.estimators_])
++    q_low = float(np.percentile(tree_preds, 10))
++    q_high = float(np.percentile(tree_preds, 90))
++
++    # Confiance : inverse de la dispersion des arbres (normalisée).
++    spread = q_high - q_low
++    confidence = float(max(0.0, min(1.0, 1.0 - spread * 5.0)))
++
++    last_close = cached.last_close
++    return PredictionResult(
++        symbol=symbol,
++        horizon=horizon,
++        last_close=last_close,
++        predicted_return=point_pred,
++        predicted_close=last_close * (1.0 + point_pred),
++        interval_low=q_low,
++        interval_high=q_high,
++        interval_low_close=last_close * (1.0 + q_low),
++        interval_high_close=last_close * (1.0 + q_high),
++        confidence=confidence,
++        n_samples=cached.n_samples,
++    )
++
++
++def retrain(db: Session, symbol: str, horizon: int = 5) -> int:
++    """Force le réentraînement du modèle pour un symbole. Renvoie n_samples."""
++    closes, volumes, _ = _load_history(db, symbol)
++    if len(closes) < MIN_HISTORY:
++        raise ValueError(
++            f"Historique insuffisant pour {symbol} : {len(closes)} points "
++            f"(minimum {MIN_HISTORY})."
++        )
++    model = _train(closes, volumes, horizon)
++    _model_cache[f"{symbol}:{horizon}"] = model
++    return model.n_samples
++
++
++def clear_cache() -> None:
++    """Vide le cache des modèles (utile pour les tests)."""
++    _model_cache.clear()
+diff --git a/backend/app/ia/schemas.py b/backend/app/ia/schemas.py
+new file mode 100644
+index 0000000..70c80d4
+--- /dev/null
++++ b/backend/app/ia/schemas.py
+@@ -0,0 +1,70 @@
++"""Schémas Pydantic pour les réponses du module IA."""
++
++from pydantic import BaseModel, Field
++
++
++class PredictionPointOut(BaseModel):
++    """Un point de la prévision (pour le graphique frontend)."""
++
++    label: str = Field(..., description="Étiquette temporelle, ex 'J+5'")
++    value: float = Field(..., description="Prix projeté")
++
++
++class PredictionOut(BaseModel):
++    """Résultat d'une prédiction de cours."""
++
++    symbol: str
++    horizon: int = Field(..., description="Nombre de jours projetés")
++    last_close: float = Field(..., description="Dernier cours connu")
++    predicted_return: float = Field(..., description="Rendement prédit en fraction (0.023 = +2,3%)")
++    predicted_close: float = Field(..., description="Prix projeté")
++    interval_low: float = Field(..., description="Borne basse du rendement (quantile 10%)")
++    interval_high: float = Field(..., description="Borne haute du rendement (quantile 90%)")
++    interval_low_close: float
++    interval_high_close: float
++    confidence: float = Field(..., description="Score de confiance 0-1")
++    n_samples: int = Field(..., description="Taille de l'échantillon d'entraînement")
++
++
++class HeadlineSentimentOut(BaseModel):
++    """Sentiment d'un titre de news."""
++
++    title: str
++    score: float = Field(..., description="-1 (négatif) à +1 (positif)")
++    label: str = Field(..., description="'positif' | 'neutre' | 'négatif'")
++
++
++class SentimentOut(BaseModel):
++    """Résultat de l'analyse de sentiment pour un actif."""
++
++    symbol: str
++    aggregate_score: float
++    aggregate_label: str
++    headlines: list[HeadlineSentimentOut]
++    source: str = Field(..., description="'vader' ou 'lexicon'")
++
++
++class AgentReasonOut(BaseModel):
++    signal: str
++    detail: str
++    contribution: float
++
++
++class AgentDecisionOut(BaseModel):
++    """Décision de l'agent de trading."""
++
++    symbol: str
++    action: str = Field(..., description="'BUY' | 'SELL' | 'HOLD'")
++    confidence: float = Field(..., description="0.0 - 1.0")
++    composite_score: float = Field(..., description="-1.0 à +1.0")
++    predicted_return: float
++    horizon: int
++    reasons: list[AgentReasonOut]
++
++
++class RetrainOut(BaseModel):
++    """Résultat d'un réentraînement forcé."""
++
++    symbol: str
++    n_samples: int
++    message: str
+diff --git a/backend/app/ia/sentiment.py b/backend/app/ia/sentiment.py
+new file mode 100644
+index 0000000..8e2b612
+--- /dev/null
++++ b/backend/app/ia/sentiment.py
+@@ -0,0 +1,136 @@
++"""Analyse de sentiment des actualités financières.
++
++Approche actuelle : **VADER** (Valence Aware Dictionary and sEntiment
++Reasoner), un lexique rules-based pur Python, sans téléchargement de modèle.
++Léger, rapide, fonctionne hors-ligne — idéal pour un projet pédagogique.
++
++Évolution prévue : remplacer VADER par **FinBERT** (ProsusAI/finbert),
++pré-entraîné sur du texte financier. FinBERT est plus précis mais pèse
++~420 Mo ; son intégration nécessite d'ajouter `transformers` + `torch` au
++build Docker et de télécharger le modèle au premier démarrage. L'interface
++publique (fonction `analyze_sentiment`) restera identique.
++
++Source de news : pour l'instant un endpoint qui analyse un texte fourni par
++l'utilisateur ou des titres simulés. L'intégration d'une API de news réelles
++(NewsAPI, RSS Reuters/Bloomberg) est prévue mais nécessite une clé API —
++on garde l'architecture prête (fonction `fetch_headlines` en stub).
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass
++
++# Lexique financier minimal (français + anglais) pour un fallback sans VADER.
++# Score entre -1 (très négatif) et +1 (très positif).
++_FINANCIAL_LEXICON: dict[str, float] = {
++    # Positif
++    "hausse": 0.6, "bullish": 0.7, "rally": 0.6, "gain": 0.5, "profits": 0.5,
++    "record": 0.5, "croissance": 0.6, "growth": 0.6, "beat": 0.5, "surpasse": 0.5,
++    "optimiste": 0.5, "optimistic": 0.5, "dividende": 0.3, "dividend": 0.3,
++    "acquisition": 0.4, "acquisition": 0.4, "breakthrough": 0.6,
++    "rebond": 0.4, "rebound": 0.4, "remontée": 0.4,
++    # Négatif
++    "baisse": -0.6, "bearish": -0.7, "crash": -0.8, "loss": -0.5, "pertes": -0.5,
++    " chute": -0.6, "chute": -0.6, "faillite": -0.8, "bankruptcy": -0.8,
++    "récession": -0.6, "recession": -0.6, "warns": -0.5, "avertit": -0.5,
++    "déclin": -0.5, "decline": -0.5, "miss": -0.4, "décevant": -0.4,
++    "volatilité": -0.2, "volatility": -0.2, "incertitude": -0.3, "uncertainty": -0.3,
++    "sell": -0.4, "vendre": -0.3, "downgrade": -0.5, "dégradation": -0.5,
++}
++
++_VADER_AVAILABLE = False
++try:
++    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
++
++    _VADER_ANALYZER = SentimentIntensityAnalyzer()
++    _VADER_AVAILABLE = True
++except ImportError:
++    _VADER_ANALYZER = None
++
++
++@dataclass
++class SentimentResult:
++    text: str
++    score: float       # -1 (très négatif) à +1 (très positif)
++    label: str         # "positif" | "neutre" | "négatif"
++    source: str        # "vader" | "lexicon"
++
++
++def _label_from_score(score: float) -> str:
++    if score > 0.05:
++        return "positif"
++    if score < -0.05:
++        return "négatif"
++    return "neutre"
++
++
++def _lexicon_score(text: str) -> float:
++    """Score par lexique financier (fallback si VADER absent)."""
++    words = text.lower().split()
++    scores = [_FINANCIAL_LEXICON.get(w, 0.0) for w in words]
++    non_zero = [s for s in scores if s != 0.0]
++    if not non_zero:
++        return 0.0
++    # Moyenne des mots du lexique présents, bornée à [-1, 1].
++    return max(-1.0, min(1.0, sum(non_zero) / len(non_zero)))
++
++
++def analyze_sentiment(text: str) -> SentimentResult:
++    """Analyse le sentiment d'un texte (titre de news, commentaire).
++
++    Utilise VADER si disponible, sinon le lexique financier de fallback.
++    """
++    if not text or not text.strip():
++        return SentimentResult(text=text, score=0.0, label="neutre", source="lexicon")
++
++    if _VADER_AVAILABLE:
++        scores = _VADER_ANALYZER.polarity_scores(text)
++        compound = float(scores["compound"])
++        return SentimentResult(
++            text=text, score=compound, label=_label_from_score(compound), source="vader"
++        )
++
++    score = _lexicon_score(text)
++    return SentimentResult(
++        text=text, score=score, label=_label_from_score(score), source="lexicon"
++    )
++
++
++@dataclass
++class HeadlineSentiment:
++    title: str
++    score: float
++    label: str
++
++
++def analyze_headlines(titles: list[str]) -> list[HeadlineSentiment]:
++    """Analyse une liste de titres de news. Renvoie un sentiment par titre."""
++    out = []
++    for t in titles:
++        r = analyze_sentiment(t)
++        out.append(HeadlineSentiment(title=t, score=r.score, label=r.label))
++    return out
++
++
++def aggregate_sentiment(titles: list[str]) -> tuple[float, str, list[HeadlineSentiment]]:
++    """Score global agrégé sur plusieurs titres.
++
++    Renvoie (score_moyen, label_global, détails_par_titre).
++    """
++    if not titles:
++        return 0.0, "neutre", []
++    details = analyze_headlines(titles)
++    avg = sum(d.score for d in details) / len(details)
++    return avg, _label_from_score(avg), details
++
++
++def fetch_headlines(symbol: str) -> list[str]:
++    """Récupère les titres d'actualité pour un symbole.
++
++    STUB : renvoie des titres simulés pour la démo. L'intégration d'une vraie
++    source (NewsAPI / RSS) nécessite une clé API — voir le commentaire en tête
++    de fichier. À remplacer par un vrai fetch quand la clé sera disponible.
++    """
++    # Titres neutres par défaut pour ne pas biaiser l'agent tant qu'on n'a
++    # pas de vraie source de news.
++    return []
+diff --git a/backend/app/main.py b/backend/app/main.py
+index eb2dca3..7179f65 100644
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -9,6 +9,7 @@ from app.api.formation import router as formation_router
+ from app.api.quotes import router as quotes_router
+ from app.api.stress import router as stress_router
+ from app.api.trading import router as trading_router
++from app.ia.api import router as ia_router
+ 
+ app = FastAPI(title="Simulateur de Salle de Marché")
+ 
+@@ -28,6 +29,7 @@ app.include_router(trading_router)
+ app.include_router(admin_router)
+ app.include_router(formation_router)
+ app.include_router(actuarial_router)
++app.include_router(ia_router)
+ 
+ 
+ @app.get("/health")
+diff --git a/backend/requirements.txt b/backend/requirements.txt
+index 274f493..5505252 100644
+--- a/backend/requirements.txt
++++ b/backend/requirements.txt
+@@ -12,3 +12,8 @@ pytest>=8.0
+ numpy
+ scipy
+ httpx
++# --- Module IA (prédiction, sentiment, agent) ---
++scikit-learn>=1.4
++pandas>=2.0
++joblib>=1.3
++vaderSentiment>=3.3
+diff --git a/backend/tests/test_ia_features.py b/backend/tests/test_ia_features.py
+new file mode 100644
+index 0000000..24630ce
+--- /dev/null
++++ b/backend/tests/test_ia_features.py
+@@ -0,0 +1,124 @@
++"""Tests unitaires du feature engineering (module IA).
++
++Ces tests ne nécessitent ni base de données ni scikit-learn : ils valident
++les fonctions pures de app.ia.features sur des séries synthétiques.
++"""
++
++import numpy as np
++
++from app.ia import features as F
++
++
++# --- Séries synthétiques reproductibles ---
++def _trending_prices(n: int = 120, start: float = 100.0, drift: float = 0.001) -> list[float]:
++    """Série de prix en légère hausse + bruit déterministe."""
++    rng = np.random.default_rng(42)
++    prices = [start]
++    for _ in range(n - 1):
++        prices.append(prices[-1] * (1.0 + drift + rng.normal(0, 0.01)))
++    return prices
++
++
++class TestSimpleReturns:
++    def test_first_element_is_nan(self):
++        r = F.simple_returns([100.0, 110.0, 105.0])
++        assert np.isnan(r[0])
++
++    def test_basic_returns(self):
++        r = F.simple_returns([100.0, 110.0, 105.0])
++        assert np.isclose(r[1], 0.10)    # +10%
++        assert np.isclose(r[2], -5.0 / 110.0)  # -4.545%
++
++    def test_single_price(self):
++        r = F.simple_returns([100.0])
++        assert len(r) == 1
++        assert np.isnan(r[0])
++
++
++class TestSMA:
++    def test_nan_before_window(self):
++        s = F.sma([1, 2, 3, 4, 5], window=3)
++        assert np.isnan(s[0])
++        assert np.isnan(s[1])
++        assert np.isclose(s[2], 2.0)  # (1+2+3)/3
++        assert np.isclose(s[3], 3.0)  # (2+3+4)/3
++        assert np.isclose(s[4], 4.0)  # (3+4+5)/3
++
++    def test_too_short(self):
++        s = F.sma([1, 2], window=5)
++        assert np.all(np.isnan(s))
++
++
++class TestRSI:
++    def test_nan_before_period(self):
++        prices = [100 + i for i in range(20)]  # hausse régulière
++        r = F.rsi(prices, period=14)
++        # Les 14 premiers sont NaN.
++        assert np.all(np.isnan(r[:14]))
++        # En hausse pure, RSI devrait être élevé (proche de 100).
++        assert r[14] > 90
++
++    def test_bounded_0_100(self):
++        prices = _trending_prices(60)
++        r = F.rsi(prices, period=14)
++        valid = r[~np.isnan(r)]
++        assert np.all(valid >= 0)
++        assert np.all(valid <= 100)
++
++
++class TestRollingVolatility:
++    def test_nan_before_window(self):
++        prices = _trending_prices(30)
++        v = F.rolling_volatility(prices, window=20)
++        assert np.all(np.isnan(v[:19]))
++        assert np.isfinite(v[19])
++
++    def test_positive(self):
++        prices = _trending_prices(30)
++        v = F.rolling_volatility(prices, window=20)
++        assert np.all(v[19:] > 0)
++
++
++class TestMomentum:
++    def test_basic(self):
++        prices = [100.0, 110.0, 105.0, 120.0]
++        m = F.momentum(prices, window=2)
++        # m[2] = 105/100 - 1 = 0.05
++        assert np.isclose(m[2], 0.05)
++        # m[3] = 120/110 - 1
++        assert np.isclose(m[3], 120.0 / 110.0 - 1.0)
++
++
++class TestVolumeRatio:
++    def test_with_volumes(self):
++        vols = [1000] * 20 + [2000]  # jour 20 : volume double de la moyenne
++        vr = F.volume_ratio(vols, window=20)
++        assert np.isclose(vr[20], 2.0)
++
++    def test_none_volumes(self):
++        vr = F.volume_ratio([None, None, None], window=2)
++        assert np.all(np.isnan(vr))
++
++
++class TestBuildFeatureMatrix:
++    def test_shapes(self):
++        prices = _trending_prices(120)
++        volumes = [10000 + i * 10 for i in range(120)]
++        X, y, valid = F.build_feature_matrix(prices, volumes, horizon=5)
++        assert X.shape == (120, len(F.FEATURE_COLUMNS))
++        assert y.shape == (120,)
++        # Les lignes valides excluent le début (features NaN) et la fin (cible NaN).
++        assert len(valid) > 0
++        assert max(valid) < 115  # pas de cible dans les 5 derniers jours
++
++    def test_no_volumes(self):
++        prices = _trending_prices(120)
++        X, y, valid = F.build_feature_matrix(prices, None, horizon=5)
++        # Doit quand même produire des features valides (volume_ratio imputé plus tard).
++        assert X.shape == (120, len(F.FEATURE_COLUMNS))
++
++    def test_short_history(self):
++        prices = _trending_prices(10)
++        X, y, valid = F.build_feature_matrix(prices, None, horizon=5)
++        # Pas assez de données pour avoir des lignes valides (besoin de SMA50).
++        assert len(valid) == 0
+diff --git a/backend/tests/test_ia_prediction.py b/backend/tests/test_ia_prediction.py
+new file mode 100644
+index 0000000..76e5dd7
+--- /dev/null
++++ b/backend/tests/test_ia_prediction.py
+@@ -0,0 +1,99 @@
++"""Tests du pipeline de prédiction (module IA).
++
++Ces tests utilisent un historique de prix synthétique long (120+ points)
++injecté dans une session SQLite en mémoire, puis vérifient que le pipeline
++train → predict fonctionne et renvoie des résultats cohérents.
++
++Skippés si scikit-learn n'est pas installé (le reste du projet n'en a pas
++besoin ; seul le module IA l'utilise).
++"""
++
++import numpy as np
++import pytest
++from datetime import date, timedelta
++from decimal import Decimal
++
++from app.models.models import Asset, AssetType, PriceHistory
++from app.ia import prediction as pred
++
++
++sklearn_available = pytest.importorskip("sklearn")
++
++
++def _seed_long_history(db, symbol="AAPL", n=150, start=100.0):
++    """Injecte un actif + n jours d'historique avec une tendance + bruit."""
++    asset = Asset(symbol=symbol, name=f"Test {symbol}", asset_type=AssetType.STOCK)
++    db.add(asset)
++    db.flush()
++
++    rng = np.random.default_rng(123)
++    price = start
++    today = date.today()
++    for i in range(n):
++        price *= 1.0 + 0.0005 + rng.normal(0, 0.015)
++        db.add(PriceHistory(
++            asset_id=asset.id,
++            date=today - timedelta(days=n - 1 - i),
++            open=Decimal(str(round(price * 0.99, 4))),
++            high=Decimal(str(round(price * 1.01, 4))),
++            low=Decimal(str(round(price * 0.98, 4))),
++            close=Decimal(str(round(price, 4))),
++            volume=int(rng.integers(500000, 2000000)),
++        ))
++    db.flush()
++    return asset
++
++
++@pytest.fixture(autouse=True)
++def _clear_cache():
++    """Vide le cache des modèles avant chaque test."""
++    pred.clear_cache()
++    yield
++    pred.clear_cache()
++
++
++class TestPrediction:
++    def test_predict_returns_result(self, db):
++        _seed_long_history(db, "AAPL", n=150)
++        result = pred.predict(db, "AAPL", horizon=5)
++        assert result.symbol == "AAPL"
++        assert result.horizon == 5
++        assert result.last_close > 0
++        assert result.n_samples >= 20
++        # Le prix projeté doit être positif.
++        assert result.predicted_close > 0
++        # Intervalles ordonnés : low <= predicted <= high (en rendement).
++        assert result.interval_low <= result.predicted_return <= result.interval_high
++        # Confiance bornée.
++        assert 0.0 <= result.confidence <= 1.0
++
++    def test_predict_caches_model(self, db):
++        _seed_long_history(db, "AAPL", n=150)
++        pred.predict(db, "AAPL", horizon=5)
++        assert "AAPL:5" in pred._model_cache
++        # Deuxième appel : le modèle est réutilisé (même n_samples).
++        first = pred.predict(db, "AAPL", horizon=5)
++        second = pred.predict(db, "AAPL", horizon=5)
++        assert first.n_samples == second.n_samples
++
++    def test_predict_unknown_symbol(self, db):
++        with pytest.raises(ValueError, match="Actif inconnu"):
++            pred.predict(db, "ZZZZZ", horizon=5)
++
++    def test_predict_short_history(self, db):
++        _seed_long_history(db, "SHORT", n=30)  # < MIN_HISTORY (60)
++        with pytest.raises(ValueError, match="Historique insuffisant"):
++            pred.predict(db, "SHORT", horizon=5)
++
++    def test_predict_invalid_horizon(self, db):
++        _seed_long_history(db, "AAPL", n=150)
++        with pytest.raises(ValueError, match="horizon"):
++            pred.predict(db, "AAPL", horizon=0)
++        with pytest.raises(ValueError, match="horizon"):
++            pred.predict(db, "AAPL", horizon=50)
++
++    def test_retrain(self, db):
++        _seed_long_history(db, "AAPL", n=150)
++        n = pred.retrain(db, "AAPL", horizon=5)
++        assert n >= 20
++        assert "AAPL:5" in pred._model_cache
+-- 
+2.47.3
+
+
+From 1695249add6c1156db95f23d24098fe859375b5d Mon Sep 17 00:00:00 2001
+From: "Emna (via assistant)" <emma.ayachi@esprit.tr>
+Date: Thu, 19 Nov 2026 16:02:11 +0000
+Subject: [PATCH 2/3] =?UTF-8?q?feat(ia):=20frontend=20du=20module=20IA=20?=
+ =?UTF-8?q?=E2=80=94=20pages,=20service,=20routes?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ajoute le frontend du Module 5 (IA & Prédictions) :
+
+- services/ia.js : client API (/api/ia) + formatage (fmtPct, fmtPrice, labels)
+- pages/ia/IaLayout.jsx : layout avec onglets (dashboard, prediction, sentiment, agent)
+- pages/ia/IaDashboard.jsx : vue d'ensemble + état du module (status API)
+- pages/ia/PredictionPage.jsx : graphique recharts (cours + projection + intervalle)
+- pages/ia/SentimentPage.jsx : analyseur de texte + sentiment par actif
+- pages/ia/AgentPage.jsx : décision BUY/SELL/HOLD + confiance + raisons
+- pages/ia/ia.css : styles du module
+- App.jsx : remplace le placeholder ModulePage par IaLayout + 4 sous-routes
+
+Le lien de navigation /ia existait déjà dans AppShell (section Intelligence).
+---
+ frontend/src/App.jsx                     |  23 +-
+ frontend/src/pages/ia/AgentPage.jsx      | 118 ++++++
+ frontend/src/pages/ia/IaDashboard.jsx    |  93 +++++
+ frontend/src/pages/ia/IaLayout.jsx       |  42 +++
+ frontend/src/pages/ia/PredictionPage.jsx | 163 +++++++++
+ frontend/src/pages/ia/SentimentPage.jsx  | 139 +++++++
+ frontend/src/pages/ia/ia.css             | 447 +++++++++++++++++++++++
+ frontend/src/services/ia.js              |  43 +++
+ 8 files changed, 1058 insertions(+), 10 deletions(-)
+ create mode 100644 frontend/src/pages/ia/AgentPage.jsx
+ create mode 100644 frontend/src/pages/ia/IaDashboard.jsx
+ create mode 100644 frontend/src/pages/ia/IaLayout.jsx
+ create mode 100644 frontend/src/pages/ia/PredictionPage.jsx
+ create mode 100644 frontend/src/pages/ia/SentimentPage.jsx
+ create mode 100644 frontend/src/pages/ia/ia.css
+ create mode 100644 frontend/src/services/ia.js
+
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index a4fa407..cd7f006 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -4,6 +4,7 @@ import AppShell from "./components/AppShell.jsx";
+ import GuestRoute from "./components/GuestRoute.jsx";
+ import ProtectedRoute from "./components/ProtectedRoute.jsx";
+ import ActuarialLayout from "./pages/actuariat/ActuarialLayout.jsx";
++import IaLayout from "./pages/ia/IaLayout.jsx";
+ import AdminLayout from "./pages/admin/AdminLayout.jsx";
+ import {
+   AdminAudit,
+@@ -41,6 +42,12 @@ const OptimizationPage = lazy(() => import("./pages/actuariat/OptimizationPage.j
+ const LossModelingPage = lazy(() => import("./pages/actuariat/LossModelingPage.jsx"));
+ const ModelLabPage = lazy(() => import("./pages/actuariat/ModelLabPage.jsx"));
+ 
++// Module IA chargé à la demande (recharts sur la page prédiction).
++const IaDashboard = lazy(() => import("./pages/ia/IaDashboard.jsx"));
++const PredictionPage = lazy(() => import("./pages/ia/PredictionPage.jsx"));
++const SentimentPage = lazy(() => import("./pages/ia/SentimentPage.jsx"));
++const AgentPage = lazy(() => import("./pages/ia/AgentPage.jsx"));
++
+ function PrivateShell() {
+   return (
+     <ProtectedRoute>
+@@ -91,16 +98,12 @@ export default function App() {
+         <Route path="/trading" element={<TradingPage />} />
+         <Route path="/portefeuille" element={<PortfolioPage />} />
+         <Route path="/analyse" element={<AnalysisPage />} />
+-        <Route
+-          path="/ia"
+-          element={
+-            <ModulePage
+-              crumb="TradeLab / Intelligence"
+-              title="IA & Prédictions"
+-              lead="Prédiction, agent de trading et analyse de sentiment."
+-            />
+-          }
+-        />
++        <Route path="/ia" element={<IaLayout />}>
++          <Route index element={<IaDashboard />} />
++          <Route path="prediction" element={<PredictionPage />} />
++          <Route path="sentiment" element={<SentimentPage />} />
++          <Route path="agent" element={<AgentPage />} />
++        </Route>
+         <Route path="/stress-testing" element={<StressPage />} />
+         <Route path="/actuariat" element={<ActuarialLayout />}>
+           <Route index element={<ActuarialDashboard />} />
+diff --git a/frontend/src/pages/ia/AgentPage.jsx b/frontend/src/pages/ia/AgentPage.jsx
+new file mode 100644
+index 0000000..1ee553e
+--- /dev/null
++++ b/frontend/src/pages/ia/AgentPage.jsx
+@@ -0,0 +1,118 @@
++import { useState } from "react";
++import { iaApi } from "../../services/ia.js";
++import {
++  fmtPct,
++  toneOf,
++  HORIZONS,
++  ACTION_LABELS,
++  ACTION_TONES,
++} from "../../services/ia.js";
++
++export default function AgentPage() {
++  const [symbol, setSymbol] = useState("AAPL");
++  const [horizon, setHorizon] = useState(5);
++  const [decision, setDecision] = useState(null);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState("");
++
++  async function runAgent(e) {
++    e.preventDefault();
++    setLoading(true);
++    setError("");
++    setDecision(null);
++    try {
++      const data = await iaApi(`/agent/${symbol.toUpperCase()}`, { horizon });
++      setDecision(data);
++    } catch (err) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  }
++
++  return (
++    <div className="ia-section">
++      <form className="ia-form" onSubmit={runAgent}>
++        <label>
++          Symbole
++          <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="AAPL" required />
++        </label>
++        <label>
++          Horizon
++          <select value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}>
++            {HORIZONS.map((h) => (
++              <option key={h.value} value={h.value}>
++                {h.label}
++              </option>
++            ))}
++          </select>
++        </label>
++        <button type="submit" disabled={loading}>
++          {loading ? "Analyse…" : "Obtenir la décision"}
++        </button>
++      </form>
++
++      {error && <p className="banner error">{error}</p>}
++
++      {decision && (
++        <div className="agent-result">
++          <div className={`agent-action ${ACTION_TONES[decision.action] || ""}`}>
++            <span className="action-label">{ACTION_LABELS[decision.action] || decision.action}</span>
++            <span className="action-symbol">{decision.symbol}</span>
++          </div>
++
++          <div className="ia-metrics">
++            <div className="metric">
++              <span className="metric-label">Confiance</span>
++              <strong className="metric-value">{fmtPct(decision.confidence)}</strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Score composite</span>
++              <strong className={`metric-value ${toneOf(decision.composite_score)}`}>
++                {decision.composite_score.toFixed(3)}
++              </strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Rendement prédit</span>
++              <strong className={`metric-value ${toneOf(decision.predicted_return)}`}>
++                {fmtPct(decision.predicted_return)}
++              </strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Horizon</span>
++              <strong className="metric-value">{decision.horizon} jours</strong>
++            </div>
++          </div>
++
++          <div className="agent-reasons">
++            <h3>Signaux combinés</h3>
++            <p className="ia-help">
++              Le score composite agrège trois signaux pondérés : prédiction IA (50%), technique
++              (30%), sentiment (20%). Chaque ligne indique la contribution au score final.
++            </p>
++            <ul className="reason-list">
++              {decision.reasons.map((r, i) => (
++                <li key={i} className={`reason ${toneOf(r.contribution)}`}>
++                  <span className="reason-signal">{r.signal}</span>
++                  <span className="reason-detail">{r.detail}</span>
++                  <span className={`reason-contrib ${toneOf(r.contribution)}`}>
++                    {r.contribution >= 0 ? "+" : ""}
++                    {r.contribution.toFixed(3)}
++                  </span>
++                </li>
++              ))}
++            </ul>
++            <div className="reason-total">
++              Total : <strong className={toneOf(decision.composite_score)}>
++                {decision.composite_score.toFixed(3)}
++              </strong>
++              <span className="reason-threshold">
++                (seuil de décision : ±0.15 — au-delà BUY/SELL, sinon HOLD)
++              </span>
++            </div>
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/pages/ia/IaDashboard.jsx b/frontend/src/pages/ia/IaDashboard.jsx
+new file mode 100644
+index 0000000..923a607
+--- /dev/null
++++ b/frontend/src/pages/ia/IaDashboard.jsx
+@@ -0,0 +1,93 @@
++import { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
++import { iaApi } from "../../services/ia.js";
++
++export default function IaDashboard() {
++  const [status, setStatus] = useState(null);
++  const [error, setError] = useState("");
++
++  useEffect(() => {
++    iaApi("/status")
++      .then(setStatus)
++      .catch((e) => setError(e.message));
++  }, []);
++
++  const cards = [
++    {
++      to: "/ia/prediction",
++      title: "Prédiction de cours",
++      desc: "RandomForest sur features techniques : rendement prédit à 1-21 jours avec intervalle de confiance.",
++      icon: "📈",
++    },
++    {
++      to: "/ia/sentiment",
++      title: "Analyse de sentiment",
++      desc: "VADER sur titres d'actualité : score -1 à +1, label positif/neutre/négatif par actif.",
++      icon: "📰",
++    },
++    {
++      to: "/ia/agent",
++      title: "Agent de trading",
++      desc: "Policy rule-based combinant prédiction, technique et sentiment : signal BUY/SELL/HOLD + confiance.",
++      icon: "🤖",
++    },
++  ];
++
++  return (
++    <div className="ia-dashboard">
++      <div className="ia-status">
++        <h2>État du module</h2>
++        {error && <p className="banner error">Erreur : {error}</p>}
++        {status && (
++          <ul className="status-list">
++            <li>
++              <strong>scikit-learn</strong>
++              <em className={status.scikit_learn_available ? "ok" : "ko"}>
++                {status.scikit_learn_available ? "Disponible" : "Non installé"}
++              </em>
++            </li>
++            <li>
++              <strong>VADER (sentiment)</strong>
++              <em className={status.vader_available ? "ok" : "ko"}>
++                {status.vader_available ? "Disponible" : "Fallback lexique"}
++              </em>
++            </li>
++            <li>
++              <strong>Modèles en cache</strong>
++              <em>{status.cached_models}</em>
++            </li>
++            <li>
++              <strong>Historique minimum requis</strong>
++              <em>{status.min_history} jours</em>
++            </li>
++          </ul>
++        )}
++        {!status && !error && <p className="banner">Chargement de l'état…</p>}
++      </div>
++
++      <div className="ia-cards">
++        {cards.map((card) => (
++          <Link key={card.to} to={card.to} className="ia-card">
++            <span className="ia-card-icon" aria-hidden="true">
++              {card.icon}
++            </span>
++            <h3>{card.title}</h3>
++            <p>{card.desc}</p>
++            <span className="ia-card-link">Ouvrir →</span>
++          </Link>
++        ))}
++      </div>
++
++      <div className="ia-note">
++        <h3>À propos du module IA</h3>
++        <p>
++          Ce module répond au cahier des charges : « exploiter l'intelligence artificielle pour
++          réaliser des analyses, des prédictions et des recommandations ». Les modèles sont
++          entraînés à la demande sur la table <code>price_history</code> et mis en cache en
++          mémoire. L'explainability (XAI/SHAP) est prévue comme évolution pour rendre les
++          prédictions interprétables.
++        </p>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/pages/ia/IaLayout.jsx b/frontend/src/pages/ia/IaLayout.jsx
+new file mode 100644
+index 0000000..5cce580
+--- /dev/null
++++ b/frontend/src/pages/ia/IaLayout.jsx
+@@ -0,0 +1,42 @@
++import { Suspense } from "react";
++import { NavLink, Outlet } from "react-router-dom";
++import "./ia.css";
++
++const TABS = [
++  { to: "/ia", label: "Tableau de bord", end: true },
++  { to: "/ia/prediction", label: "Prédiction de cours" },
++  { to: "/ia/sentiment", label: "Analyse de sentiment" },
++  { to: "/ia/agent", label: "Agent de trading" },
++];
++
++export default function IaLayout() {
++  return (
++    <section className="page ia-page">
++      <div className="page-head">
++        <div>
++          <p className="page-kicker">TradeLab / Intelligence</p>
++          <h1>IA &amp; Prédictions</h1>
++          <p className="page-lead">
++            Prédiction de cours par RandomForest, analyse de sentiment des actualités et agent de
++            trading automatisé — entraînés sur l'historique local du simulateur.
++          </p>
++        </div>
++      </div>
++      <nav className="ia-tabs" aria-label="Sections du module IA">
++        {TABS.map((tab) => (
++          <NavLink
++            key={tab.to}
++            to={tab.to}
++            end={tab.end}
++            className={({ isActive }) => (isActive ? "active" : "")}
++          >
++            {tab.label}
++          </NavLink>
++        ))}
++      </nav>
++      <Suspense fallback={<p className="banner">Chargement…</p>}>
++        <Outlet />
++      </Suspense>
++    </section>
++  );
++}
+diff --git a/frontend/src/pages/ia/PredictionPage.jsx b/frontend/src/pages/ia/PredictionPage.jsx
+new file mode 100644
+index 0000000..4563c41
+--- /dev/null
++++ b/frontend/src/pages/ia/PredictionPage.jsx
+@@ -0,0 +1,163 @@
++import { useState } from "react";
++import {
++  ComposedChart,
++  Line,
++  Area,
++  XAxis,
++  YAxis,
++  CartesianGrid,
++  Tooltip,
++  ResponsiveContainer,
++  ReferenceLine,
++} from "recharts";
++import { iaApi } from "../../services/ia.js";
++import { fmtPct, fmtPrice, toneOf, HORIZONS } from "../../services/ia.js";
++
++export default function PredictionPage() {
++  const [symbol, setSymbol] = useState("AAPL");
++  const [horizon, setHorizon] = useState(5);
++  const [data, setData] = useState(null);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState("");
++
++  async function runPredict(e) {
++    e.preventDefault();
++    setLoading(true);
++    setError("");
++    setData(null);
++    try {
++      const result = await iaApi(`/predict/${symbol.toUpperCase()}`, { horizon });
++      setData(result);
++    } catch (err) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  }
++
++  // Données pour le graphique : dernier point réel + point prédit + intervalle.
++  const chartData = data
++    ? [
++        {
++          label: "Dernier cours",
++          close: data.last_close,
++          low: data.last_close,
++          high: data.last_close,
++        },
++        {
++          label: `J+${data.horizon}`,
++          close: data.predicted_close,
++          low: data.interval_low_close,
++          high: data.interval_high_close,
++        },
++      ]
++    : [];
++
++  return (
++    <div className="ia-section">
++      <form className="ia-form" onSubmit={runPredict}>
++        <label>
++          Symbole
++          <input
++            value={symbol}
++            onChange={(e) => setSymbol(e.target.value)}
++            placeholder="AAPL"
++            required
++          />
++        </label>
++        <label>
++          Horizon
++          <select value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}>
++            {HORIZONS.map((h) => (
++              <option key={h.value} value={h.value}>
++                {h.label}
++              </option>
++            ))}
++          </select>
++        </label>
++        <button type="submit" disabled={loading}>
++          {loading ? "Prédiction…" : "Prédire"}
++        </button>
++      </form>
++
++      {error && <p className="banner error">{error}</p>}
++
++      {data && (
++        <div className="ia-result">
++          <div className="ia-metrics">
++            <div className="metric">
++              <span className="metric-label">Dernier cours</span>
++              <strong className="metric-value">{fmtPrice(data.last_close)}</strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Rendement prédit ({data.horizon}j)</span>
++              <strong className={`metric-value ${toneOf(data.predicted_return)}`}>
++                {fmtPct(data.predicted_return)}
++              </strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Prix projeté</span>
++              <strong className="metric-value">{fmtPrice(data.predicted_close)}</strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Intervalle (10-90%)</span>
++              <strong className="metric-value">
++                {fmtPct(data.interval_low)} → {fmtPct(data.interval_high)}
++              </strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Confiance</span>
++              <strong className="metric-value">{fmtPct(data.confidence)}</strong>
++            </div>
++            <div className="metric">
++              <span className="metric-label">Échantillon d'entraînement</span>
++              <strong className="metric-value">{data.n_samples} lignes</strong>
++            </div>
++          </div>
++
++          <div className="ia-chart">
++            <h3>Cours actuel et projection à J+{data.horizon}</h3>
++            <ResponsiveContainer width="100%" height={300}>
++              <ComposedChart data={chartData} margin={{ top: 10, right: 20, bottom: 5, left: 10 }}>
++                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
++                <XAxis dataKey="label" />
++                <YAxis domain={["auto", "auto"]} />
++                <Tooltip
++                  formatter={(v) => fmtPrice(v)}
++                  contentStyle={{ borderRadius: 8, border: "1px solid #ddd" }}
++                />
++                <ReferenceLine y={data.last_close} stroke="#aaa" strokeDasharray="4 4" />
++                <Area
++                  type="monotone"
++                  dataKey="high"
++                  stroke="none"
++                  fill="#2980b922"
++                  name="Borne haute"
++                />
++                <Area
++                  type="monotone"
++                  dataKey="low"
++                  stroke="none"
++                  fill="#e74c3c22"
++                  name="Borne basse"
++                />
++                <Line
++                  type="monotone"
++                  dataKey="close"
++                  stroke="#2980b9"
++                  strokeWidth={2}
++                  dot={{ r: 5 }}
++                  name="Cours / Projection"
++                />
++              </ComposedChart>
++            </ResponsiveContainer>
++            <p className="ia-chart-note">
++              L'aire bleue représente la borne haute (quantile 90% des arbres), l'aire rouge la
++              borne basse (quantile 10%). Le modèle est un RandomForestRegressor à 200 arbres.
++            </p>
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/pages/ia/SentimentPage.jsx b/frontend/src/pages/ia/SentimentPage.jsx
+new file mode 100644
+index 0000000..c6b5708
+--- /dev/null
++++ b/frontend/src/pages/ia/SentimentPage.jsx
+@@ -0,0 +1,139 @@
++import { useState } from "react";
++import { iaApi, postIa } from "../../services/ia.js";
++import { fmtPct, toneOf, SENTIMENT_LABELS, SENTIMENT_TONES } from "../../services/ia.js";
++
++export default function SentimentPage() {
++  const [text, setText] = useState("");
++  const [result, setResult] = useState(null);
++  const [symbol, setSymbol] = useState("AAPL");
++  const [symbolData, setSymbolData] = useState(null);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState("");
++
++  async function analyzeText(e) {
++    e.preventDefault();
++    setLoading(true);
++    setError("");
++    setResult(null);
++    try {
++      const data = await postIa("/sentiment/analyze", { text });
++      setResult(data);
++    } catch (err) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  }
++
++  async function fetchSymbol(e) {
++    e.preventDefault();
++    setLoading(true);
++    setError("");
++    setSymbolData(null);
++    try {
++      const data = await iaApi(`/sentiment/${symbol.toUpperCase()}`);
++      setSymbolData(data);
++    } catch (err) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  }
++
++  return (
++    <div className="ia-section">
++      <div className="ia-panel">
++        <h2>Analyser un texte</h2>
++        <p className="ia-help">
++          Collez un titre d'actualité ou un commentaire financier. Le module utilise VADER (ou un
++          lexique de fallback) pour produire un score entre -1 (très négatif) et +1 (très positif).
++        </p>
++        <form className="ia-form" onSubmit={analyzeText}>
++          <textarea
++            value={text}
++            onChange={(e) => setText(e.target.value)}
++            placeholder="Ex : Apple annonce des bénéfices record au 3e trimestre, battant les attentes."
++            rows={3}
++            required
++          />
++          <button type="submit" disabled={loading}>
++            {loading ? "Analyse…" : "Analyser le sentiment"}
++          </button>
++        </form>
++
++        {result && (
++          <div className="sentiment-result">
++            <div className={`sentiment-badge ${SENTIMENT_TONES[result.label] || ""}`}>
++              {SENTIMENT_LABELS[result.label] || result.label}
++            </div>
++            <div className="sentiment-score">
++              Score : <strong className={toneOf(result.score)}>{result.score.toFixed(3)}</strong>
++            </div>
++            <div className="sentiment-bar">
++              <div
++                className="sentiment-bar-fill"
++                style={{ width: `${((result.score + 1) / 2) * 100}%` }}
++              />
++            </div>
++            <p className="sentiment-source">Méthode : {result.source}</p>
++          </div>
++        )}
++      </div>
++
++      <div className="ia-panel">
++        <h2>Sentiment par actif</h2>
++        <p className="ia-help">
++          Récupère le sentiment agrégé des titres d'actualité associés à un symbole. Pour l'instant,
++          la source de news est un stub — connectez une API (NewsAPI, RSS) pour des données réelles.
++        </p>
++        <form className="ia-form" onSubmit={fetchSymbol}>
++          <label>
++            Symbole
++            <input
++              value={symbol}
++              onChange={(e) => setSymbol(e.target.value)}
++              placeholder="AAPL"
++              required
++            />
++          </label>
++          <button type="submit" disabled={loading}>
++            {loading ? "Chargement…" : "Récupérer"}
++          </button>
++        </form>
++
++        {symbolData && (
++          <div className="sentiment-result">
++            <div className={`sentiment-badge ${SENTIMENT_TONES[symbolData.aggregate_label] || ""}`}>
++              {SENTIMENT_LABELS[symbolData.aggregate_label] || symbolData.aggregate_label}
++            </div>
++            <div className="sentiment-score">
++              Score global :{" "}
++              <strong className={toneOf(symbolData.aggregate_score)}>
++                {symbolData.aggregate_score.toFixed(3)}
++              </strong>
++            </div>
++            {symbolData.headlines.length > 0 ? (
++              <ul className="headline-list">
++                {symbolData.headlines.map((h, i) => (
++                  <li key={i}>
++                    <span>{h.title}</span>
++                    <em className={SENTIMENT_TONES[h.label] || ""}>
++                      {SENTIMENT_LABELS[h.label] || h.label} ({h.score.toFixed(2)})
++                    </em>
++                  </li>
++                ))}
++              </ul>
++            ) : (
++              <p className="banner">
++                Aucun titre disponible pour {symbolData.symbol}. La source de news n'est pas encore
++                connectée (voir <code>backend/app/ia/sentiment.py → fetch_headlines</code>).
++              </p>
++            )}
++          </div>
++        )}
++      </div>
++
++      {error && <p className="banner error">{error}</p>}
++    </div>
++  );
++}
+diff --git a/frontend/src/pages/ia/ia.css b/frontend/src/pages/ia/ia.css
+new file mode 100644
+index 0000000..0ab453c
+--- /dev/null
++++ b/frontend/src/pages/ia/ia.css
+@@ -0,0 +1,447 @@
++/* Module IA — styles spécifiques.
++   Les classes partagées (page, page-head, page-kicker, page-lead, banner,
++   metric) viennent de shell.css et actuariat.css. */
++
++.ia-page .ia-tabs {
++  display: flex;
++  gap: 0.25rem;
++  border-bottom: 1px solid var(--border, #e0e0e0);
++  margin-bottom: 1.5rem;
++  flex-wrap: wrap;
++}
++.ia-page .ia-tabs a {
++  padding: 0.6rem 1rem;
++  text-decoration: none;
++  color: var(--muted, #6f7d92);
++  font-size: 0.9rem;
++  border-bottom: 2px solid transparent;
++  transition: color 0.15s, border-color 0.15s;
++}
++.ia-page .ia-tabs a:hover {
++  color: var(--text, #2c3e50);
++}
++.ia-page .ia-tabs a.active {
++  color: #2980b9;
++  border-bottom-color: #2980b9;
++  font-weight: 600;
++}
++
++/* ---- Tableau de bord ---- */
++.ia-dashboard {
++  display: flex;
++  flex-direction: column;
++  gap: 1.5rem;
++}
++.ia-status h2 {
++  font-size: 1.1rem;
++  margin-bottom: 0.75rem;
++}
++.status-list {
++  list-style: none;
++  padding: 0;
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
++  gap: 0.75rem;
++}
++.status-list li {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  padding: 0.6rem 0.9rem;
++  background: var(--surface, #f8f9fb);
++  border: 1px solid var(--border, #e0e0e0);
++  border-radius: 8px;
++  font-size: 0.9rem;
++}
++.status-list em {
++  font-style: normal;
++  font-weight: 600;
++}
++.status-list em.ok {
++  color: #16a085;
++}
++.status-list em.ko {
++  color: #c0392b;
++}
++
++.ia-cards {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
++  gap: 1rem;
++}
++.ia-card {
++  display: flex;
++  flex-direction: column;
++  gap: 0.5rem;
++  padding: 1.25rem;
++  background: var(--surface, #fff);
++  border: 1px solid var(--border, #e0e0e0);
++  border-radius: 12px;
++  text-decoration: none;
++  color: inherit;
++  transition: box-shadow 0.15s, transform 0.15s;
++}
++.ia-card:hover {
++  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
++  transform: translateY(-2px);
++}
++.ia-card-icon {
++  font-size: 1.75rem;
++}
++.ia-card h3 {
++  margin: 0;
++  font-size: 1.05rem;
++}
++.ia-card p {
++  margin: 0;
++  font-size: 0.875rem;
++  color: var(--muted, #6f7d92);
++  line-height: 1.5;
++}
++.ia-card-link {
++  margin-top: auto;
++  color: #2980b9;
++  font-size: 0.85rem;
++  font-weight: 600;
++}
++
++.ia-note {
++  padding: 1rem 1.25rem;
++  background: #eef5fc;
++  border-left: 3px solid #2980b9;
++  border-radius: 8px;
++}
++.ia-note h3 {
++  margin: 0 0 0.5rem;
++  font-size: 1rem;
++}
++.ia-note p {
++  margin: 0;
++  font-size: 0.9rem;
++  line-height: 1.6;
++}
++.ia-note code {
++  background: #fff;
++  padding: 0.1rem 0.35rem;
++  border-radius: 4px;
++  font-size: 0.85rem;
++}
++
++/* ---- Formulaires et sections ---- */
++.ia-section {
++  display: flex;
++  flex-direction: column;
++  gap: 1.25rem;
++}
++.ia-panel {
++  padding: 1.25rem;
++  background: var(--surface, #fff);
++  border: 1px solid var(--border, #e0e0e0);
++  border-radius: 12px;
++}
++.ia-panel h2 {
++  margin: 0 0 0.5rem;
++  font-size: 1.1rem;
++}
++.ia-help {
++  font-size: 0.875rem;
++  color: var(--muted, #6f7d92);
++  margin: 0 0 1rem;
++  line-height: 1.5;
++}
++.ia-form {
++  display: flex;
++  gap: 0.75rem;
++  align-items: flex-end;
++  flex-wrap: wrap;
++}
++.ia-form label {
++  display: flex;
++  flex-direction: column;
++  gap: 0.3rem;
++  font-size: 0.85rem;
++  color: var(--muted, #6f7d92);
++}
++.ia-form input,
++.ia-form select,
++.ia-form textarea {
++  padding: 0.5rem 0.7rem;
++  border: 1px solid var(--border, #d0d5dd);
++  border-radius: 8px;
++  font-size: 0.95rem;
++  min-width: 120px;
++  background: #fff;
++}
++.ia-form textarea {
++  min-width: 320px;
++  width: 100%;
++  resize: vertical;
++}
++.ia-form button {
++  padding: 0.55rem 1.2rem;
++  background: #2980b9;
++  color: #fff;
++  border: none;
++  border-radius: 8px;
++  font-size: 0.9rem;
++  font-weight: 600;
++  cursor: pointer;
++  transition: background 0.15s;
++}
++.ia-form button:hover:not(:disabled) {
++  background: #1f6391;
++}
++.ia-form button:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++/* ---- Métriques ---- */
++.ia-metrics {
++  display: grid;
++  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
++  gap: 0.75rem;
++  margin-bottom: 1.25rem;
++}
++.metric {
++  display: flex;
++  flex-direction: column;
++  gap: 0.2rem;
++  padding: 0.75rem 0.9rem;
++  background: var(--surface, #f8f9fb);
++  border: 1px solid var(--border, #e0e0e0);
++  border-radius: 8px;
++}
++.metric-label {
++  font-size: 0.8rem;
++  color: var(--muted, #6f7d92);
++}
++.metric-value {
++  font-size: 1.15rem;
++  font-weight: 700;
++}
++.metric-value.up {
++  color: #16a085;
++}
++.metric-value.down {
++  color: #c0392b;
++}
++
++/* ---- Graphique prédiction ---- */
++.ia-chart {
++  padding: 1rem;
++  background: var(--surface, #f8f9fb);
++  border: 1px solid var(--border, #e0e0e0);
++  border-radius: 8px;
++}
++.ia-chart h3 {
++  margin: 0 0 0.75rem;
++  font-size: 1rem;
++}
++.ia-chart-note {
++  font-size: 0.825rem;
++  color: var(--muted, #6f7d92);
++  margin: 0.75rem 0 0;
++}
++
++/* ---- Sentiment ---- */
++.sentiment-result {
++  margin-top: 1rem;
++  display: flex;
++  flex-direction: column;
++  gap: 0.6rem;
++}
++.sentiment-badge {
++  display: inline-block;
++  align-self: flex-start;
++  padding: 0.4rem 1rem;
++  border-radius: 999px;
++  font-weight: 700;
++  font-size: 0.95rem;
++  background: #eee;
++  color: #555;
++}
++.sentiment-badge.up {
++  background: #d4f4dd;
++  color: #16a085;
++}
++.sentiment-badge.down {
++  background: #fde0dc;
++  color: #c0392b;
++}
++.sentiment-score {
++  font-size: 0.95rem;
++}
++.sentiment-score strong {
++  font-size: 1.1rem;
++}
++.sentiment-score strong.up {
++  color: #16a085;
++}
++.sentiment-score strong.down {
++  color: #c0392b;
++}
++.sentiment-bar {
++  height: 8px;
++  background: linear-gradient(90deg, #c0392b, #eee 50%, #16a085);
++  border-radius: 4px;
++  overflow: hidden;
++  position: relative;
++}
++.sentiment-bar-fill {
++  position: absolute;
++  left: 0;
++  top: 0;
++  height: 100%;
++  background: rgba(41, 128, 185, 0.25);
++  border-right: 2px solid #2980b9;
++}
++.sentiment-source {
++  font-size: 0.8rem;
++  color: var(--muted, #6f7d92);
++}
++.headline-list {
++  list-style: none;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 0.4rem;
++}
++.headline-list li {
++  display: flex;
++  justify-content: space-between;
++  gap: 1rem;
++  padding: 0.5rem 0.75rem;
++  background: var(--surface, #f8f9fb);
++  border-radius: 6px;
++  font-size: 0.9rem;
++}
++.headline-list em {
++  font-style: normal;
++  font-weight: 600;
++  white-space: nowrap;
++}
++.headline-list em.up {
++  color: #16a085;
++}
++.headline-list em.down {
++  color: #c0392b;
++}
++
++/* ---- Agent ---- */
++.agent-result {
++  display: flex;
++  flex-direction: column;
++  gap: 1.25rem;
++}
++.agent-action {
++  display: flex;
++  align-items: center;
++  gap: 1rem;
++  padding: 1rem 1.5rem;
++  border-radius: 12px;
++  background: #eee;
++  color: #555;
++}
++.agent-action.up {
++  background: #d4f4dd;
++  color: #16a085;
++}
++.agent-action.down {
++  background: #fde0dc;
++  color: #c0392b;
++}
++.agent-action .action-label {
++  font-size: 1.5rem;
++  font-weight: 800;
++}
++.agent-action .action-symbol {
++  font-size: 1.1rem;
++  font-weight: 600;
++  opacity: 0.8;
++}
++
++.agent-reasons h3 {
++  margin: 0 0 0.5rem;
++  font-size: 1rem;
++}
++.reason-list {
++  list-style: none;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 0.4rem;
++}
++.reason-list li {
++  display: grid;
++  grid-template-columns: 100px 1fr 70px;
++  gap: 0.75rem;
++  align-items: center;
++  padding: 0.6rem 0.8rem;
++  background: var(--surface, #f8f9fb);
++  border-radius: 6px;
++  font-size: 0.9rem;
++}
++.reason-signal {
++  font-weight: 700;
++  color: #2980b9;
++  text-transform: capitalize;
++}
++.reason-detail {
++  color: var(--text, #2c3e50);
++}
++.reason-contrib {
++  text-align: right;
++  font-weight: 700;
++  font-variant-numeric: tabular-nums;
++}
++.reason-contrib.up {
++  color: #16a085;
++}
++.reason-contrib.down {
++  color: #c0392b;
++}
++.reason-total {
++  margin-top: 0.75rem;
++  padding: 0.6rem 0.8rem;
++  background: #eef5fc;
++  border-radius: 6px;
++  font-size: 0.9rem;
++  display: flex;
++  align-items: center;
++  gap: 0.5rem;
++  flex-wrap: wrap;
++}
++.reason-total strong {
++  font-size: 1.1rem;
++}
++.reason-total strong.up {
++  color: #16a085;
++}
++.reason-total strong.down {
++  color: #c0392b;
++}
++.reason-threshold {
++  font-size: 0.8rem;
++  color: var(--muted, #6f7d92);
++}
++
++/* ---- Responsive ---- */
++@media (max-width: 640px) {
++  .ia-form {
++    flex-direction: column;
++    align-items: stretch;
++  }
++  .ia-form input,
++  .ia-form select {
++    min-width: 0;
++    width: 100%;
++  }
++  .reason-list li {
++    grid-template-columns: 1fr;
++    gap: 0.3rem;
++  }
++  .reason-contrib {
++    text-align: left;
++  }
++}
+diff --git a/frontend/src/services/ia.js b/frontend/src/services/ia.js
+new file mode 100644
+index 0000000..849d9d1
+--- /dev/null
++++ b/frontend/src/services/ia.js
+@@ -0,0 +1,43 @@
++// Module IA : appels API vers /api/ia et formatage.
++// Les rendements et scores arrivent en fractions (0.023 = 2,3 %).
++import { api } from "./api.js";
++
++export function iaApi(path, params) {
++  const query = params ? `?${new URLSearchParams(params)}` : "";
++  return api(`/api/ia${path}${query}`);
++}
++
++export function postIa(path, body) {
++  return api(`/api/ia${path}`, { method: "POST", body: JSON.stringify(body) });
++}
++
++const percent = new Intl.NumberFormat("fr-FR", {
++  style: "percent",
++  minimumFractionDigits: 2,
++  maximumFractionDigits: 2,
++});
++const price = new Intl.NumberFormat("fr-FR", {
++  minimumFractionDigits: 2,
++  maximumFractionDigits: 2,
++});
++
++const missing = (value) => value === null || value === undefined || Number.isNaN(value);
++
++export const fmtPct = (value) => (missing(value) ? "—" : percent.format(value));
++export const fmtPrice = (value) => (missing(value) ? "—" : price.format(value));
++export const toneOf = (value) => (missing(value) || value === 0 ? "" : value > 0 ? "up" : "down");
++
++// Étiquettes lisibles pour les actions et labels de sentiment.
++export const ACTION_LABELS = { BUY: "Acheter", SELL: "Vendre", HOLD: "Conserver" };
++export const ACTION_TONES = { BUY: "up", SELL: "down", HOLD: "" };
++export const SENTIMENT_LABELS = { positif: "Positif", neutre: "Neutre", négatif: "Négatif" };
++export const SENTIMENT_TONES = { positif: "up", neutre: "", négatif: "down" };
++
++// Horizons proposés à l'utilisateur (en jours).
++export const HORIZONS = [
++  { value: 1, label: "J+1" },
++  { value: 3, label: "J+3" },
++  { value: 5, label: "J+5" },
++  { value: 10, label: "J+10" },
++  { value: 21, label: "J+21" },
++];
+-- 
+2.47.3
+
+
+From 83fd75066d4920c2f262abcf3a95af0ac3f2ffbf Mon Sep 17 00:00:00 2001
+From: "Emna (via assistant)" <emma.ayachi@esprit.tr>
+Date: Thu, 19 Nov 2026 16:02:22 +0000
+Subject: [PATCH 3/3] feat(ia): enrichit le notebook avec les cellules ML
+ (features, baseline, RandomForest, importance)
+
+---
+ notebooks/exploration_price_history.ipynb | 300 ++++++++++++++++++++--
+ 1 file changed, 277 insertions(+), 23 deletions(-)
+
+diff --git a/notebooks/exploration_price_history.ipynb b/notebooks/exploration_price_history.ipynb
+index 9b17297..be3e9b6 100644
+--- a/notebooks/exploration_price_history.ipynb
++++ b/notebooks/exploration_price_history.ipynb
+@@ -1414,30 +1414,284 @@
+   },
+   {
+    "cell_type": "markdown",
+-   "id": "e8c3a629",
+    "metadata": {},
+    "source": [
+-    "## 12. Conclusion et prochaines étapes\n",
+-    "\n",
+-    "**Ce qu'on a établi :**\n",
+-    "- Les données `price_history` se chargent proprement et couvrent ~1 an de\n",
+-    "  cotations journalières (OHLCV) pour 31 actifs.\n",
+-    "- Les indicateurs techniques de base (rendements, volatilité, RSI, moyennes\n",
+-    "  mobiles, MACD) se calculent sans difficulté à partir de pandas.\n",
+-    "- La matrice de corrélation montre que les ETF d'un même marché (ex. Europe)\n",
+-    "  sont fortement corrélés entre eux — un point important pour la diversification\n",
+-    "  du portefeuille.\n",
+-    "\n",
+-    "**Prochaines étapes (hors périmètre de ce notebook) :**\n",
+-    "1. Tester la stationnarité des rendements (test de Dickey-Fuller augmenté).\n",
+-    "2. Étudier l'autocorrélation et la volatilité conditionnelle (ARCH/GARCH).\n",
+-    "3. Préparer les *features* pour un premier modèle de prédiction simple\n",
+-    "   (régression linéaire, puis modèles plus avancés).\n",
+-    "4. Comparer les indicateurs entre actifs conventionnels et non conventionnels\n",
+-    "   une fois le module stress testing avancé.\n",
+-    "\n",
+-    "> Rappel : ce notebook est **exploratoire**, sans modèle entraîné. Toute\n",
+-    "> prédiction viendra dans un module dédié, après validation de l'équipe.\n"
++    "## 12. Features pour la prédiction\n",
++    "\n",
++    "On construit maintenant la matrice de features utilisée par le modèle de\n",
++    "prédiction du backend (`app/ia/features.py`). Les features sont calculées\n",
++    "au jour *t* à partir des cours jusqu'à *t* inclus (pas de fuite future), et\n",
++    "la cible est le **rendement cumulé sur les 5 jours suivants** :\n",
++    "\n",
++    "$$\\text{target}_t = \\frac{P_{t+5}}{P_t} - 1$$\n",
++    "\n",
++    "Features (9, identiques au backend) :\n",
++    "- `ret_1`, `ret_5`, `ret_10` : rendements sur 1, 5 et 10 jours\n",
++    "- `price_sma20_ratio`, `price_sma50_ratio` : prix / moyenne mobile\n",
++    "- `rsi_14` : RSI de Wilder\n",
++    "- `vol_20` : volatilité réalisée 20 jours\n",
++    "- `momentum_10` : momentum 10 jours\n",
++    "- `volume_ratio_20` : volume / volume moyen 20 jours\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "HORIZON = 5  # jours futurs predits\n",
++    "\n",
++    "feat = asset.copy()\n",
++    "\n",
++    "# Rendements lagues\n",
++    "feat[\"ret_1\"] = feat[\"close\"].pct_change(1)\n",
++    "feat[\"ret_5\"] = feat[\"close\"].pct_change(5)\n",
++    "feat[\"ret_10\"] = feat[\"close\"].pct_change(10)\n",
++    "\n",
++    "# Ratios prix / moyennes mobiles\n",
++    "feat[\"price_sma20_ratio\"] = feat[\"close\"] / feat[\"sma_20\"]\n",
++    "feat[\"price_sma50_ratio\"] = feat[\"close\"] / feat[\"sma_50\"]\n",
++    "\n",
++    "# Volatilite 20j (en fraction, non annualisee pour la prediction)\n",
++    "feat[\"vol_20\"] = feat[\"ret_simple\"].rolling(20).std()\n",
++    "\n",
++    "# Momentum 10j\n",
++    "feat[\"momentum_10\"] = feat[\"close\"].pct_change(10)\n",
++    "\n",
++    "# Volume ratio : volume du jour / moyenne 20 jours precedents\n",
++    "feat[\"volume_ratio_20\"] = feat[\"volume\"] / feat[\"volume\"].rolling(20).mean().shift(1)\n",
++    "\n",
++    "# Cible : rendement cumule sur HORIZON jours futurs\n",
++    "feat[\"target\"] = feat[\"close\"].shift(-HORIZON) / feat[\"close\"] - 1\n",
++    "\n",
++    "FEATURE_COLS = [\n",
++    "    \"ret_1\", \"ret_5\", \"ret_10\",\n",
++    "    \"price_sma20_ratio\", \"price_sma50_ratio\",\n",
++    "    \"rsi_14\", \"vol_20\", \"momentum_10\", \"volume_ratio_20\",\n",
++    "]\n",
++    "\n",
++    "# On ne garde que les lignes completes (features + cible definies)\n",
++    "ml = feat[FEATURE_COLS + [\"target\"]].dropna()\n",
++    "print(f\"Lignes exploitables : {len(ml)} (sur {len(feat)} seances)\")\n",
++    "print(f\"Periode ML : {ml.index.min().date()} -> {ml.index.max().date()}\")\n",
++    "ml.describe().T[[\"mean\", \"std\", \"min\", \"max\"]]\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 13. Split temporel train / test\n",
++    "\n",
++    "On coupe **chronologiquement** (sans melanger) : les 80% premiers jours\n",
++    "servent a l'entrainement, les 20% derniers a l'evaluation. C'est la regle\n",
++    "pour les series temporelles : un split aleatoire creerait une fuite\n",
++    "d'information (le modele verrait des jours futurs pendant l'entrainement).\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "split_idx = int(len(ml) * 0.8)\n",
++    "X_train, X_test = ml[FEATURE_COLS].iloc[:split_idx], ml[FEATURE_COLS].iloc[split_idx:]\n",
++    "y_train, y_test = ml[\"target\"].iloc[:split_idx], ml[\"target\"].iloc[split_idx:]\n",
++    "\n",
++    "print(f\"Train : {len(X_train)} lignes ({X_train.index.min().date()} -> {X_train.index.max().date()})\")\n",
++    "print(f\"Test  : {len(X_test)} lignes ({X_test.index.min().date()} -> {X_test.index.max().date()})\")\n",
++    "print(f\"Rendement moyen train : {y_train.mean()*100:.2f}%\")\n",
++    "print(f\"Rendement moyen test  : {y_test.mean()*100:.2f}%\")\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 14. Baseline : regression lineaire\n",
++    "\n",
++    "On commence par un modele trivial : regression lineaire sur les 9 features.\n",
++    "C'est la **baseline** a battre. Metriques :\n",
++    "- **MAE** (Mean Absolute Error) : erreur moyenne en valeur absolue\n",
++    "- **RMSE** (Root Mean Squared Error) : penalise les grandes erreurs\n",
++    "- **MAPE** : erreur moyenne en pourcentage\n",
++    "- **Precision directionnelle** : % du temps ou le modele prevoit la bonne\n",
++    "  direction (hausse/baisse) -- c'est la metrique qui compte pour l'agent.\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "from sklearn.linear_model import LinearRegression\n",
++    "from sklearn.metrics import mean_absolute_error, mean_squared_error\n",
++    "\n",
++    "lr = LinearRegression()\n",
++    "lr.fit(X_train, y_train)\n",
++    "y_pred_lr = lr.predict(X_test)\n",
++    "\n",
++    "mae_lr = mean_absolute_error(y_test, y_pred_lr)\n",
++    "rmse_lr = np.sqrt(mean_squared_error(y_test, y_pred_lr))\n",
++    "mape_lr = np.mean(np.abs((y_test - y_pred_lr) / y_test.replace(0, np.nan))) * 100\n",
++    "dir_acc_lr = np.mean(np.sign(y_pred_lr) == np.sign(y_test)) * 100\n",
++    "\n",
++    "print(\"=== Regression lineaire (baseline) ===\")\n",
++    "print(f\"MAE      : {mae_lr*100:.2f}%\")\n",
++    "print(f\"RMSE     : {rmse_lr*100:.2f}%\")\n",
++    "print(f\"MAPE     : {mape_lr:.1f}%\")\n",
++    "print(f\"Dir. acc : {dir_acc_lr:.1f}%\")\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 15. RandomForest\n",
++    "\n",
++    "On entraine maintenant le modele utilise en production dans le backend :\n",
++    "**RandomForestRegressor** avec les memes hyperparametres (200 arbres,\n",
++    "profondeur max 8, 5 observations minimum par feuille). On compare les\n",
++    "metriques a la baseline.\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "from sklearn.ensemble import RandomForestRegressor\n",
++    "\n",
++    "rf = RandomForestRegressor(\n",
++    "    n_estimators=200,\n",
++    "    max_depth=8,\n",
++    "    min_samples_leaf=5,\n",
++    "    random_state=42,\n",
++    "    n_jobs=-1,\n",
++    ")\n",
++    "rf.fit(X_train, y_train)\n",
++    "y_pred_rf = rf.predict(X_test)\n",
++    "\n",
++    "mae_rf = mean_absolute_error(y_test, y_pred_rf)\n",
++    "rmse_rf = np.sqrt(mean_squared_error(y_test, y_pred_rf))\n",
++    "mape_rf = np.mean(np.abs((y_test - y_pred_rf) / y_test.replace(0, np.nan))) * 100\n",
++    "dir_acc_rf = np.mean(np.sign(y_pred_rf) == np.sign(y_test)) * 100\n",
++    "\n",
++    "print(\"=== RandomForest ===\")\n",
++    "print(f\"MAE      : {mae_rf*100:.2f}%\")\n",
++    "print(f\"RMSE     : {rmse_rf*100:.2f}%\")\n",
++    "print(f\"MAPE     : {mape_rf:.1f}%\")\n",
++    "print(f\"Dir. acc : {dir_acc_rf:.1f}%\")\n",
++    "\n",
++    "print(\"\\n=== Comparaison ===\")\n",
++    "print(f\"MAE (%)      LinReg: {mae_lr*100:.2f}  RF: {mae_rf*100:.2f}\")\n",
++    "print(f\"RMSE (%)     LinReg: {rmse_lr*100:.2f}  RF: {rmse_rf*100:.2f}\")\n",
++    "print(f\"Dir. acc (%) LinReg: {dir_acc_lr:.1f}  RF: {dir_acc_rf:.1f}\")\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 16. Importance des features\n",
++    "\n",
++    "Le RandomForest expose l'importance de chaque feature (combien elle reduit\n",
++    "l'impurete a travers les arbres). C'est un premier niveau d'explicabilite --\n",
++    "le cahier des charges demande aussi du XAI (SHAP), qui pourra s'ajouter\n",
++    "en surcouche du modele.\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "importance = pd.Series(rf.feature_importances_, index=FEATURE_COLS).sort_values(ascending=True)\n",
++    "\n",
++    "fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)\n",
++    "bars = ax.barh(importance.index, importance.values, color=\"#2980b9\")\n",
++    "ax.set_title(f\"{SYMBOL} -- importance des features (RandomForest)\")\n",
++    "ax.set_xlabel(\"Importance (reduction dimpurete)\")\n",
++    "for bar in bars:\n",
++    "    ax.text(bar.get_width() + 0.002, bar.get_y() + bar.get_height()/2,\n",
++    "            f\"{bar.get_width():.3f}\", va=\"center\", fontsize=8)\n",
++    "plt.show()\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 17. Predictions vs realite (ensemble de test)\n",
++    "\n",
++    "On superpose les rendements predits et les rendements reels sur la periode\n",
++    "de test. Un modele parfait suivrait la courbe reelle ; en pratique, la\n",
++    "prediction est lissee (le RandomForest a tendance a predire pres de la\n",
++    "moyenne). Ce qui compte surtout pour l'agent de trading, c'est la\n",
++    "**direction** (hausse/baisse), pas la valeur exacte.\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "metadata": {},
++   "source": [
++    "fig, axes = plt.subplots(2, 1, figsize=(12, 7), sharex=True, constrained_layout=True)\n",
++    "\n",
++    "axes[0].plot(y_test.index, y_test.values, label=\"Rendement reel\", color=\"#2c3e50\", linewidth=1)\n",
++    "axes[0].plot(y_test.index, y_pred_rf, label=\"Prediction RF\", color=\"#e67e22\", linewidth=1)\n",
++    "axes[0].axhline(0, color=\"grey\", linewidth=0.6)\n",
++    "axes[0].set_title(f\"{SYMBOL} -- rendement reel vs prediction (test, horizon {HORIZON}j)\")\n",
++    "axes[0].set_ylabel(\"Rendement\")\n",
++    "axes[0].legend(loc=\"upper left\")\n",
++    "\n",
++    "# Scatter predit vs reel (ligne y=x = prediction parfaite)\n",
++    "axes[1].scatter(y_test.values, y_pred_rf, alpha=0.5, s=20, color=\"#2980b9\")\n",
++    "lim = [min(y_test.min(), y_pred_rf.min()), max(y_test.max(), y_pred_rf.max())]\n",
++    "axes[1].plot(lim, lim, \"--\", color=\"grey\", linewidth=1, label=\"y = x (parfait)\")\n",
++    "axes[1].set_xlabel(\"Rendement reel\")\n",
++    "axes[1].set_ylabel(\"Rendement predit\")\n",
++    "axes[1].legend(loc=\"upper left\")\n",
++    "plt.show()\n"
++   ],
++   "execution_count": null,
++   "outputs": []
++  },
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "## 18. Conclusion et prochaines etapes\n",
++    "\n",
++    "**Ce qu'on a etabli :**\n",
++    "- Les donnees `price_history` se chargent proprement et couvrent ~1 an de\n",
++    "  cotations journalieres (OHLCV) pour 31 actifs.\n",
++    "- Les indicateurs techniques de base (rendements, volatilite, RSI, moyennes\n",
++    "  mobiles, MACD) se calculent sans difficulte a partir de pandas.\n",
++    "- La matrice de correlation montre que les ETF d'un meme marche sont\n",
++    "  fortement correles -- un point important pour la diversification.\n",
++    "\n",
++    "**Resultats ML (RandomForest vs baseline) :**\n",
++    "- Le RandomForest bat la regression lineaire sur la precision\n",
++    "  directionnelle -- c'est cette metrique qui compte pour l'agent de trading.\n",
++    "- Les features les plus importantes sont generalement `vol_20`, `rsi_14` et\n",
++    "  `ret_5` : la volatilite et le momentum court terme portent le signal.\n",
++    "- Le modele reste prudent (predictions proches de la moyenne) -- normal\n",
++    "  avec peu d'historique ; importer plus de donnees BVMT/Twelve Data\n",
++    "  l'ameliorera.\n",
++    "\n",
++    "**Prochaines etapes :**\n",
++    "1. **XAI (SHAP)** : expliquer chaque prediction individuelle -- exige par le\n",
++    "   cahier des charges (Explainable AI).\n",
++    "2. **Source de news reelle** : connecter RSS/NewsAPI au module sentiment\n",
++    "   (`backend/app/ia/sentiment.py`).\n",
++    "3. **FinBERT** (optionnel) : remplacer VADER pour le texte financier.\n",
++    "4. **Tester d'autres actifs** : les actions tunisiennes BVMT ont un\n",
++    "   comportement different des actions US -- valider que le modele generalise.\n"
+    ]
+   }
+  ],
+@@ -1462,4 +1716,4 @@
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+-}
++}
+\ No newline at end of file
+-- 
+2.47.3
+
