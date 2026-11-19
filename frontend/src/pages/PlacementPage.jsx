@@ -104,6 +104,21 @@ export default function PlacementPage() {
     }
   }
 
+  async function skip() {
+    setBusy(true);
+    setError("");
+    try {
+      await api("/formation/placement/skip", { method: "POST" });
+      setResult({ skipped: true, level: "debutant" });
+      setStep("result");
+      await refreshUser();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (error && !quiz) return <p className="status error">{error}</p>;
   if (!quiz) return <p className="status">Chargement…</p>;
 
@@ -125,7 +140,7 @@ export default function PlacementPage() {
 
       {step === "intro" && (
         <section className="pl-hero">
-          <span className="pl-pill">Étape 1 sur 1 · obligatoire</span>
+          <span className="pl-pill">Étape 1 sur 1 · facultatif</span>
           <h1>Découvrons ton niveau</h1>
           <p>
             Avant d'entrer dans les salles de marché, un court test permet de te placer dans la bonne
@@ -150,6 +165,9 @@ export default function PlacementPage() {
           </p>
           <button className="pl-btn primary big" onClick={() => setStep("glossary")}>
             C'est parti
+          </button>
+          <button className="pl-btn ghost" onClick={skip} disabled={busy}>
+            {busy ? "..." : "Passer, je suis débutant"}
           </button>
         </section>
       )}
@@ -233,7 +251,27 @@ export default function PlacementPage() {
         </section>
       )}
 
-      {step === "result" && result && (
+      {step === "result" && result && result.skipped && (
+        <section className="pl-panel">
+          <div className="pl-result pl-result-skip">
+            <span
+              className="pl-pill"
+              style={{ background: LEVELS[result.level].color, color: "#0b1220" }}
+            >
+              Niveau {LEVELS[result.level].label}
+            </span>
+            <h1>Test passé</h1>
+            <p className="pl-sub">{LEVELS[result.level].text}</p>
+          </div>
+          <div className="pl-actions end">
+            <button className="pl-btn primary big" onClick={() => navigate("/accueil", { replace: true })}>
+              Découvrir la plateforme
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === "result" && result && !result.skipped && (
         <section className="pl-panel">
           <div className="pl-result">
             <Gauge score={result.score} max={result.max_score} color={LEVELS[result.level].color} />

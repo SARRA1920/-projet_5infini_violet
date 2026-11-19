@@ -53,6 +53,25 @@ def submit_placement(
     return result
 
 
+@router.post("/placement/skip")
+def skip_placement(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Passe le test de niveau et démarre directement en débutant.
+
+    Contrairement a submit_placement, aucun score n'est enregistre
+    (placement_score reste None) pour distinguer un skip d'un vrai 0/36.
+    """
+    if user.level is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Le test de niveau a déjà été passé")
+    user.level = "debutant"
+    user.placement_score = None
+    user.placement_done_at = datetime.utcnow()
+    db.commit()
+    return {"level": user.level, "skipped": True}
+
+
 # ---------- Salles de crise ----------
 class TradeRequest(BaseModel):
     symbol: str

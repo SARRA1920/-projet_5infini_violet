@@ -26,6 +26,8 @@
 .pl-btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
 .pl-btn.primary:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); }
 .pl-btn.big { padding: 0.9rem 1.8rem; font-size: 1rem; }
+.pl-btn.ghost { background: transparent; border-color: transparent; color: #8a9bb8; font-size: 0.85rem; text-decoration: underline; text-decoration-color: rgba(138,155,184,.4); }
+.pl-btn.ghost:hover:not(:disabled) { background: transparent; color: #c3cde0; }
 .pl-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.6rem; flex-wrap: wrap; }
 .pl-actions.end { justify-content: flex-end; }
 .pl-hint { color: #5f6e85; font-size: 0.8rem; }
