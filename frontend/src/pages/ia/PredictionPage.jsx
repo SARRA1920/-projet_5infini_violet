@@ -119,34 +119,41 @@ export default function PredictionPage() {
             <h3>Cours actuel et projection à J+{data.horizon}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={chartData} margin={{ top: 10, right: 20, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="label" />
-                <YAxis domain={["auto", "auto"]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="label" stroke="#93a0b5" tick={{ fontSize: 12 }} />
+                <YAxis domain={["auto", "auto"]} stroke="#93a0b5" tick={{ fontSize: 12 }} />
                 <Tooltip
                   formatter={(v) => fmtPrice(v)}
-                  contentStyle={{ borderRadius: 8, border: "1px solid #ddd" }}
+                  contentStyle={{
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#121a2b",
+                    color: "#e8eef8",
+                    fontSize: 13,
+                  }}
+                  labelStyle={{ color: "#93a0b5" }}
                 />
-                <ReferenceLine y={data.last_close} stroke="#aaa" strokeDasharray="4 4" />
+                <ReferenceLine y={data.last_close} stroke="#5a6a82" strokeDasharray="4 4" />
                 <Area
                   type="monotone"
                   dataKey="high"
                   stroke="none"
-                  fill="#2980b922"
+                  fill="rgba(47,124,246,0.15)"
                   name="Borne haute"
                 />
                 <Area
                   type="monotone"
                   dataKey="low"
                   stroke="none"
-                  fill="#e74c3c22"
+                  fill="rgba(255,93,115,0.15)"
                   name="Borne basse"
                 />
                 <Line
                   type="monotone"
                   dataKey="close"
-                  stroke="#2980b9"
-                  strokeWidth={2}
-                  dot={{ r: 5 }}
+                  stroke="#2f7cf6"
+                  strokeWidth={2.5}
+                  dot={{ r: 5, fill: "#2f7cf6" }}
                   name="Cours / Projection"
                 />
               </ComposedChart>
