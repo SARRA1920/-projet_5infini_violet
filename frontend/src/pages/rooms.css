@@ -38,12 +38,36 @@
 .rm-brief { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .9rem 1.1rem; border-radius: 12px; background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.35); margin-bottom: 1rem; color: #cfe0f7; font-size: .92rem; }
 .rm-brief p { margin: 0; line-height: 1.5; }
 .rm-brief button { flex: none; padding: .45rem .9rem; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: transparent; color: #fff; cursor: pointer; }
-.rm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 1rem; align-items: start; }
+.rm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
 @media (max-width: 1000px) { .rm-layout { grid-template-columns: 1fr; } }
-.rm-left, .rm-right { display: flex; flex-direction: column; gap: 1rem; }
+.rm-left { display: flex; flex-direction: column; gap: 1rem; }
+.rm-right { display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); }
+.rm-watchlist { overflow-y: auto; }
+.rm-trade-panel { display: flex; flex-direction: column; gap: 0; }
 .rm-asset-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
 .rm-asset-head h2 small { color: #8a96ad; font-weight: 400; font-size: .8rem; margin-left: .4rem; }
-.rm-chart { width: 100%; height: 300px; }
+.rm-chart-wrap { position: relative; }
+.rm-chart { width: 100%; height: 320px; }
+.rm-chart-legend {
+  position: absolute; top: .4rem; left: .4rem; z-index: 2;
+  display: flex; align-items: baseline; gap: .5rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .76rem;
+  color: #8a96ad; background: rgba(10,16,28,.55); backdrop-filter: blur(2px);
+  padding: .2rem .55rem; border-radius: 8px; pointer-events: none;
+}
+.rm-chart-legend strong { color: #e8eef8; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rm-chart-legend small { color: #4a5670; }
+
+/* Ticket d'ordre, juste sous le graphique : plus besoin de scroller pour trader */
+.rm-ticket { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,.1); }
+.rm-ticket-top { display: flex; align-items: flex-end; gap: .8rem; flex-wrap: wrap; }
+.rm-ticket-top .trade-field { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: .4rem; color: #93a0b5; font-size: .82rem; }
+.rm-ticket-top .trade-field input {
+  padding: .65rem .75rem; border: 1px solid rgba(255,255,255,.08); border-radius: 10px;
+  background: #0b1220; color: #e8eef8; font: inherit;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+}
+.rm-ticket-top .trade-field input:disabled { opacity: .45; }
 .rm-table { width: 100%; border-collapse: collapse; }
 .rm-table th { text-align: left; color: #8a96ad; font-weight: 500; font-size: .8rem; padding: .4rem .5rem; }
 .rm-table td { padding: .5rem; border-top: 1px solid rgba(255,255,255,.06); cursor: pointer; }

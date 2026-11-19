@@ -10,36 +10,101 @@ const pct = (n) => `${n > 0 ? "+" : ""}${Number(n).toFixed(2).replace(".", ",")}
 const clock = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 const cls = (n) => (n > 0 ? "up" : n < 0 ? "down" : "");
 
-function PriceChart({ history }) {
+function PriceChart({ history, up }) {
   const ref = useRef(null);
   const seriesRef = useRef(null);
   const chartRef = useRef(null);
+  const priceLineRef = useRef(null);
+  const [hover, setHover] = useState(null);
+
+  const color = up ? "#3dd68c" : "#ff5d73";
 
   useEffect(() => {
     const chart = createChart(ref.current, {
       autoSize: true,
-      height: 300,
-      layout: { background: { type: "solid", color: "transparent" }, textColor: "#8a96ad" },
-      grid: { vertLines: { color: "rgba(255,255,255,0.05)" }, horzLines: { color: "rgba(255,255,255,0.05)" } },
+      height: 320,
+      layout: {
+        background: { type: "solid", color: "transparent" },
+        textColor: "#8a96ad",
+        fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+        fontSize: 11,
+      },
+      grid: { vertLines: { color: "rgba(255,255,255,0.045)" }, horzLines: { color: "rgba(255,255,255,0.045)" } },
       rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
       timeScale: { borderColor: "rgba(255,255,255,0.08)" },
+      crosshair: {
+        vertLine: { color: "rgba(255,255,255,0.25)", width: 1, style: 3, labelBackgroundColor: "#1c2a44" },
+        horzLine: { color: "rgba(255,255,255,0.25)", width: 1, style: 3, labelBackgroundColor: "#1c2a44" },
+      },
     });
-    seriesRef.current = chart.addAreaSeries({
-      lineColor: "#5aa6ff",
-      topColor: "rgba(90,166,255,0.35)",
-      bottomColor: "rgba(90,166,255,0.02)",
+    const series = chart.addAreaSeries({
+      lineColor: color,
+      topColor: `${color}59`,
+      bottomColor: `${color}05`,
       lineWidth: 2,
+      priceLineVisible: false,
     });
+    seriesRef.current = series;
     chartRef.current = chart;
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData.size) {
+        setHover(null);
+        return;
+      }
+      const point = param.seriesData.get(series);
+      if (point) setHover({ time: param.time, value: point.value });
+    });
+
     return () => chart.remove();
-  }, []);
+  }, [color]);
 
   useEffect(() => {
-    seriesRef.current.setData(history.map(([time, value]) => ({ time, value })));
+    const data = history.map(([time, value]) => ({ time, value }));
+    seriesRef.current.setData(data);
     chartRef.current.timeScale().fitContent();
+
+    if (priceLineRef.current) {
+      seriesRef.current.removePriceLine(priceLineRef.current);
+      priceLineRef.current = null;
+    }
+    const last = data[data.length - 1];
+    if (last) {
+      priceLineRef.current = seriesRef.current.createPriceLine({
+        price: last.value,
+        color: "rgba(255,255,255,0.35)",
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: "dernier",
+      });
+    }
   }, [history]);
 
-  return <div ref={ref} className="rm-chart" />;
+  const values = history.map(([, value]) => value);
+  const hi = values.length ? Math.max(...values) : null;
+  const lo = values.length ? Math.min(...values) : null;
+
+  return (
+    <div className="rm-chart-wrap">
+      <div className="rm-chart-legend">
+        {hover ? (
+          <>
+            <span>{new Date(hover.time).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
+            <strong>{money(hover.value)} $</strong>
+          </>
+        ) : (
+          <>
+            <span>Plus haut · Plus bas</span>
+            <strong>
+              {hi !== null ? money(hi) : "—"} <small>/</small> {lo !== null ? money(lo) : "—"}
+            </strong>
+          </>
+        )}
+      </div>
+      <div ref={ref} className="rm-chart" />
+    </div>
+  );
 }
 
 export default function RoomPage() {
@@ -164,7 +229,7 @@ export default function RoomPage() {
 
       <div className="rm-layout">
         <div className="rm-left">
-          <div className="panel">
+          <div className="panel rm-trade-panel">
             <div className="rm-asset-head">
               <h2>
                 {asset.symbol} <small>{asset.name}</small>
@@ -174,7 +239,53 @@ export default function RoomPage() {
                 {asset.change_pct !== null && <span className={cls(asset.change_pct)}>{pct(asset.change_pct)}</span>}
               </div>
             </div>
-            <PriceChart history={asset.history} />
+            <PriceChart history={asset.history} up={asset.change_pct === null || asset.change_pct >= 0} />
+
+            <div className="rm-ticket">
+              <div className="rm-ticket-top">
+                <label className="trade-field">
+                  Quantité
+                  <input
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="0"
+                    disabled={!active}
+                  />
+                </label>
+                <div className="rm-quick">
+                  {[0.25, 0.5, 1].map((f) => (
+                    <button key={f} disabled={!active} onClick={() => fill(f, "buy")}>
+                      {f === 1 ? "Max achat" : `${f * 100} % cash`}
+                    </button>
+                  ))}
+                  <button disabled={!active || !asset.quantity} onClick={() => fill(1, "sell")}>
+                    Tout vendre
+                  </button>
+                </div>
+              </div>
+              <p className="rm-cost">Montant : {valid ? `${money(cost)} $` : "—"}</p>
+              <div className="rm-trade">
+                <button
+                  className="buy"
+                  disabled={!active || !valid || busy}
+                  onClick={() => act("trade", { symbol: asset.symbol, side: "buy", quantity })}
+                >
+                  Acheter
+                </button>
+                <button
+                  className="sell"
+                  disabled={!active || !valid || busy}
+                  onClick={() => act("trade", { symbol: asset.symbol, side: "sell", quantity })}
+                >
+                  Vendre
+                </button>
+              </div>
+              <button className="rm-next" disabled={!active || busy} onClick={() => act("next")}>
+                {s.is_last_day ? "Terminer la partie" : "Jour suivant →"}
+              </button>
+              <p className="rm-muted">Les ordres sont exécutés au cours de clôture du jour, sans frais.</p>
+            </div>
           </div>
 
           <div className="panel">
@@ -209,7 +320,7 @@ export default function RoomPage() {
         </div>
 
         <aside className="rm-right">
-          <div className="panel">
+          <div className="panel rm-watchlist">
             <h2>Actifs</h2>
             <ul className="rm-assets">
               {s.assets.map((a) => (
@@ -229,51 +340,6 @@ export default function RoomPage() {
                 </li>
               ))}
             </ul>
-          </div>
-
-          <div className="panel">
-            <h2>Passer un ordre · {asset.symbol}</h2>
-            <label className="trade-field">
-              Quantité
-              <input
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                inputMode="decimal"
-                placeholder="0"
-                disabled={!active}
-              />
-            </label>
-            <div className="rm-quick">
-              {[0.25, 0.5, 1].map((f) => (
-                <button key={f} disabled={!active} onClick={() => fill(f, "buy")}>
-                  {f === 1 ? "Max achat" : `${f * 100} % cash`}
-                </button>
-              ))}
-              <button disabled={!active || !asset.quantity} onClick={() => fill(1, "sell")}>
-                Tout vendre
-              </button>
-            </div>
-            <p className="rm-cost">Montant : {valid ? `${money(cost)} $` : "—"}</p>
-            <div className="rm-trade">
-              <button
-                className="buy"
-                disabled={!active || !valid || busy}
-                onClick={() => act("trade", { symbol: asset.symbol, side: "buy", quantity })}
-              >
-                Acheter
-              </button>
-              <button
-                className="sell"
-                disabled={!active || !valid || busy}
-                onClick={() => act("trade", { symbol: asset.symbol, side: "sell", quantity })}
-              >
-                Vendre
-              </button>
-            </div>
-            <button className="rm-next" disabled={!active || busy} onClick={() => act("next")}>
-              {s.is_last_day ? "Terminer la partie" : "Jour suivant →"}
-            </button>
-            <p className="rm-muted">Les ordres sont exécutés au cours de clôture du jour, sans frais.</p>
           </div>
         </aside>
       </div>
