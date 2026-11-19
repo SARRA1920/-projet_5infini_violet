@@ -104,7 +104,9 @@ export default function AgentPage() {
             <h3>Signaux combinés</h3>
             <p className="ia-help">
               Le score composite agrège trois signaux pondérés : prédiction IA (50%), technique
-              (30%), sentiment (20%). Chaque ligne indique la contribution au score final.
+              (30%), sentiment (20%). Chaque ligne indique la contribution au score final. La ligne
+              « filtre » (contribution nulle) signale un achat/une vente bloqués par le filtre de
+              tendance SMA20/SMA50.
             </p>
             <ul className="reason-list">
               {decision.reasons.map((r, i) => (
@@ -123,7 +125,9 @@ export default function AgentPage() {
                 {decision.composite_score.toFixed(3)}
               </strong>
               <span className="reason-threshold">
-                (seuil de décision : ±0.15 — au-delà BUY/SELL, sinon HOLD)
+                (seuil de décision : ±{decision.threshold.toFixed(2)} — au-delà
+                BUY/SELL, sinon HOLD ; un achat reste bloqué si la SMA20 est
+                sous la SMA50)
               </span>
             </div>
           </div>

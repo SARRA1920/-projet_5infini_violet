@@ -30,7 +30,11 @@ from app.models.models import Asset, PriceHistory
 from . import features as F
 
 # Seuil minimal d'historique pour entraîner un modèle crédible.
-MIN_HISTORY = 60
+# Relevé de 60 à 120 (recommandation « expand training data ») : 60 points
+# ne couvrent qu'un seul régime de marché — le RandomForest apprend alors
+# par cœur la seule tendance qu'il a vue. 120 points (~6 mois) permettent
+# d'observer au moins deux régimes (hausse + correction).
+MIN_HISTORY = 120
 # Durée de vie du cache modèle en secondes (10 minutes).
 CACHE_TTL = 600
 
@@ -74,6 +78,29 @@ def _load_history(db: Session, symbol: str) -> tuple[list[float], list[float | N
     return closes, volumes, asset
 
 
+# Hyper-paramètres du RandomForest, partagés entre la prédiction en direct
+# et le backtest walk-forward (un seul endroit à ajuster).
+MODEL_PARAMS = {
+    "max_depth": 8,
+    "min_samples_leaf": 5,
+    "random_state": 42,
+    "n_jobs": -1,
+}
+
+
+def fit_model(X_train: np.ndarray, y_train: np.ndarray, n_estimators: int = 200):
+    """Entraîne un RandomForestRegressor sur les échantillons fournis.
+
+    Utilisé par prediction._train (historique complet) et par le backtest
+    walk-forward de agent.py (fenêtre glissante : uniquement le passé). Les
+    imputations de NaN doivent être faites par l'appelant AVANT l'appel.
+    """
+    RF = _get_sklearn()
+    model = RF(n_estimators=n_estimators, **MODEL_PARAMS)
+    model.fit(X_train, y_train)
+    return model
+
+
 def _train(closes: list[float], volumes: list[float | None], horizon: int) -> _CachedModel:
     """Entraîne le RandomForest sur l'historique donné."""
     X, y, valid_idx = F.build_feature_matrix(closes, volumes, horizon=horizon)
@@ -91,15 +118,7 @@ def _train(closes: list[float], volumes: list[float | None], horizon: int) -> _C
     X_train = X_train.copy()
     X_train[inds] = np.take(col_mean, inds[1])
 
-    RF = _get_sklearn()
-    model = RF(
-        n_estimators=200,
-        max_depth=8,
-        min_samples_leaf=5,
-        random_state=42,
-        n_jobs=-1,
-    )
-    model.fit(X_train, y_train)
+    model = fit_model(X_train, y_train)
 
     # Dernière ligne de features pour la prédiction immédiate.
     last_row = X[-1].copy()
@@ -220,3 +239,106 @@ def feature_importance(db: Session, symbol: str, horizon: int = 5) -> list[dict]
         reverse=True,
     )
     return [{"name": name, "importance": float(val)} for name, val in pairs]
+
+
+@dataclass
+class CalibrationBucket:
+    bucket: str          # "Q1" .. "Q5" (quintile de prédiction)
+    n: int
+    mean_predicted: float
+    mean_actual: float
+
+
+@dataclass
+class ModelDiagnostics:
+    """Diagnostic du modèle : pourquoi prédit-il (presque) toujours du positif ?
+
+    Répond à la recommandation « re-evaluate features » avec des mesures
+    concrètes plutôt qu'à l'intuition :
+    - feature_ic : corrélation de Spearman de chaque feature avec le rendement
+      futur, sur l'échantillon d'entraînement — montre quelles features sont
+      réellement informatives (|IC| proche de 0 → bruit) ;
+    - biais de signe : moyenne des prédictions vs moyenne des cibles, et part
+      de prédictions positives vs part de cibles positives. La cause racine du
+      « toujours positif » est l'asymétrie de la cible : sur un titre qui a
+      monté, la moyenne des rendements futurs est positive, et un régresseur
+      recentre ses prédictions autour de cette moyenne ;
+    - calibration par quintile : le modèle classe-t-il correctement ? Si la
+      moyenne réelle croît du quintile Q1 (prédictions basses) à Q5 (hautes),
+      le classement est utile même avec un biais de niveau.
+    """
+
+    symbol: str
+    horizon: int
+    n_samples: int
+    feature_importance: list[dict]
+    feature_ic: list[dict]           # {"name", "ic"} trié par |IC| décroissant
+    mean_predicted: float
+    mean_actual: float
+    pct_predicted_positive: float
+    pct_actual_positive: float
+    calibration: list[CalibrationBucket]
+
+
+def model_diagnostics(db: Session, symbol: str, horizon: int = 5) -> ModelDiagnostics:
+    """Analyse le modèle entraîné : IC par feature, biais de signe, calibration."""
+    from scipy.stats import spearmanr
+
+    cached = _get_or_train(db, symbol, horizon)
+    closes, volumes, _ = _load_history(db, symbol)
+    X, y, valid_idx = F.build_feature_matrix(closes, volumes, horizon=horizon)
+    X_valid = X[valid_idx]
+    y_valid = y[valid_idx]
+
+    # IC de Spearman feature → rendement futur (échantillon d'entraînement).
+    ics = []
+    for j, name in enumerate(F.FEATURE_COLUMNS):
+        col = X_valid[:, j]
+        if np.std(col) == 0:
+            ic = 0.0
+        else:
+            rho = spearmanr(col, y_valid).statistic
+            ic = 0.0 if np.isnan(rho) else float(rho)
+        ics.append({"name": name, "ic": ic})
+    ics.sort(key=lambda d: abs(d["ic"]), reverse=True)
+
+    # Biais de signe : prédictions in-sample vs cibles réelles.
+    preds = cached.model.predict(X_valid)
+    pct_pred_pos = float(np.mean(preds > 0))
+    pct_actual_pos = float(np.mean(y_valid > 0))
+
+    # Calibration par quintile de prédiction.
+    order = np.argsort(preds)
+    buckets = []
+    n = len(preds)
+    for q in range(5):
+        sel = order[q * n // 5 : (q + 1) * n // 5]
+        if len(sel) == 0:
+            continue
+        buckets.append(CalibrationBucket(
+            bucket=f"Q{q + 1}",
+            n=int(len(sel)),
+            mean_predicted=float(np.mean(preds[sel])),
+            mean_actual=float(np.mean(y_valid[sel])),
+        ))
+
+    importances = cached.model.feature_importances_
+    pairs = sorted(
+        zip(F.FEATURE_COLUMNS, importances.tolist()),
+        key=lambda kv: kv[1],
+        reverse=True,
+    )
+    return ModelDiagnostics(
+        symbol=symbol,
+        horizon=horizon,
+        n_samples=len(valid_idx),
+        feature_importance=[
+            {"name": name, "importance": float(val)} for name, val in pairs
+        ],
+        feature_ic=ics,
+        mean_predicted=float(np.mean(preds)),
+        mean_actual=float(np.mean(y_valid)),
+        pct_predicted_positive=pct_pred_pos,
+        pct_actual_positive=pct_actual_pos,
+        calibration=buckets,
+    )

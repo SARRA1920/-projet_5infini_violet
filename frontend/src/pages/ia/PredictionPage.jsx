@@ -30,6 +30,7 @@ export default function PredictionPage() {
   }, []);
   const [data, setData] = useState(null);
   const [featureImp, setFeatureImp] = useState(null);
+  const [diag, setDiag] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,13 +40,18 @@ export default function PredictionPage() {
     setError("");
     setData(null);
     setFeatureImp(null);
+    setDiag(null);
     try {
       const result = await iaApi(`/predict/${symbol.toUpperCase()}`, { horizon });
       setData(result);
-      // Récupère l'importance des features en parallèle (indépendant de la prédiction).
+      // Récupère l'importance des features et le diagnostic en parallèle
+      // (indépendants de la prédiction elle-même).
       iaApi(`/feature-importance/${symbol.toUpperCase()}`, { horizon })
         .then(setFeatureImp)
         .catch(() => setFeatureImp(null));
+      iaApi(`/diagnostics/${symbol.toUpperCase()}`, { horizon })
+        .then(setDiag)
+        .catch(() => setDiag(null));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -235,6 +241,87 @@ export default function PredictionPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {diag && (
+            <div className="ia-diagnostics">
+              <h3>Diagnostic du modèle</h3>
+              <p className="ia-chart-note">
+                Pourquoi le modèle prédit-il (presque) toujours du positif ? Sur un titre
+                historiquement montant, la moyenne des rendements futurs est positive et le
+                régresseur recentre ses prédictions autour de cette moyenne. Le diagnostic mesure
+                ce biais et la qualité du <em>classement</em> (utile même avec un biais de niveau).
+              </p>
+              <div className="ia-metrics">
+                <div className="metric">
+                  <span className="metric-label">Prédictions positives</span>
+                  <strong className="metric-value">{fmtPct(diag.pct_predicted_positive)}</strong>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">Cibles réelles positives</span>
+                  <strong className="metric-value">{fmtPct(diag.pct_actual_positive)}</strong>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">Moyenne prédite</span>
+                  <strong className={`metric-value ${toneOf(diag.mean_predicted)}`}>
+                    {fmtPct(diag.mean_predicted)}
+                  </strong>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">Moyenne réelle</span>
+                  <strong className={`metric-value ${toneOf(diag.mean_actual)}`}>
+                    {fmtPct(diag.mean_actual)}
+                  </strong>
+                </div>
+              </div>
+              <div className="diag-columns">
+                <div className="diag-block">
+                  <h4>Calibration par quintile de prédiction</h4>
+                  <table className="diag-table">
+                    <thead>
+                      <tr>
+                        <th>Quintile</th>
+                        <th>Prédit moy.</th>
+                        <th>Réel moy.</th>
+                        <th>n</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diag.calibration.map((b) => (
+                        <tr key={b.bucket}>
+                          <td>{b.bucket}</td>
+                          <td className={toneOf(b.mean_predicted)}>{fmtPct(b.mean_predicted)}</td>
+                          <td className={toneOf(b.mean_actual)}>{fmtPct(b.mean_actual)}</td>
+                          <td>{b.n}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="ia-chart-note">
+                    Si le rendement réel moyen croît de Q1 à Q5, le modèle classe correctement les
+                    jours — même si le niveau des prédictions est décalé.
+                  </p>
+                </div>
+                <div className="diag-block">
+                  <h4>IC par feature (Spearman, top 5)</h4>
+                  <ul className="diag-ic-list">
+                    {diag.feature_ic.slice(0, 5).map((f) => (
+                      <li key={f.name}>
+                        <span>{f.name}</span>
+                        <strong className={toneOf(f.ic)}>
+                          {f.ic >= 0 ? "+" : ""}{f.ic.toFixed(3)}
+                        </strong>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="ia-chart-note">
+                    Une feature dont l'IC est proche de 0 n'apporte aucune information directionnelle
+                    — une importance élevée avec un IC nul signale que le modèle mémorise au lieu de
+                    généraliser.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

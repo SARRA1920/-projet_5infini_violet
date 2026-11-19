@@ -13,6 +13,16 @@ Les features calculées pour le jour t (à partir des cours jusqu'à t inclus) :
 - momentum_10 : momentum = P_t / P_(t-10) - 1 ;
 - volume_ratio_20 : volume du jour / volume moyen 20 jours.
 
+Features ajoutées pour rendre les baisses VISIBLES du modèle (la première
+version ne voyait que des niveaux — le RandomForest prédisait systématiquement
+du positif car la cible moyenne d'un titre qui monte est positive, sans jamais
+« voir » qu'il était en train de chuter) :
+- drawdown_20 : distance au plus haut des 20 derniers jours (≤ 0, fortement
+  négatif en pleine chute) ;
+- sma20_slope : pente de la SMA20 sur 5 jours (direction de la tendance) ;
+- bb_pos : position du prix dans les bandes de Bollinger ((P - SMA20)/(2·σ20),
+  négatif sous la bande médiane).
+
 La cible (target) est le rendement cumulé sur les `horizon` jours suivants :
 target_t = P_(t+horizon) / P_t - 1.
 """
@@ -108,6 +118,68 @@ def momentum(prices: list[float], window: int = 10) -> np.ndarray:
     return out
 
 
+def rolling_max(prices: list[float], window: int = 20) -> np.ndarray:
+    """Plus haut des `window` derniers cours (jour t inclus) ; NaN avant t >= window."""
+    p = _to_array(prices)
+    out = np.full_like(p, np.nan)
+    if len(p) < window:
+        return out
+    for i in range(window - 1, len(p)):
+        out[i] = p[i - window + 1 : i + 1].max()
+    return out
+
+
+def drawdown(prices: list[float], window: int = 20) -> np.ndarray:
+    """Distance au plus haut des `window` derniers jours : P_t / max(P) - 1.
+
+    Valeur ≤ 0 : 0 au sommet, fortement négatif en pleine chute. C'est la
+    feature qui rend la baisse visible du modèle (le prix/sma ne suffit pas :
+    il reste positif tant que le prix est au-dessus de sa moyenne, même en
+    train de chuter).
+    """
+    p = _to_array(prices)
+    out = np.full_like(p, np.nan)
+    if len(p) < window:
+        return out
+    high = rolling_max(p, window)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        out = p / high - 1.0
+    return out
+
+
+def sma_slope(sma_arr: np.ndarray, lookback: int = 5) -> np.ndarray:
+    """Pente relative de la SMA : SMA(t) / SMA(t-lookback) - 1.
+
+    Positive en tendance haussière, négative en tendance baissière. NaN tant
+    que la SMA n'est pas définie sur lookback + 1 jours.
+    """
+    out = np.full_like(sma_arr, np.nan)
+    if len(sma_arr) <= lookback:
+        return out
+    shifted = np.full_like(sma_arr, np.nan)
+    shifted[lookback:] = sma_arr[:-lookback]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        out = sma_arr / shifted - 1.0
+    return out
+
+
+def bollinger_pos(prices: list[float], window: int = 20) -> np.ndarray:
+    """Position du prix dans les bandes de Bollinger : (P - SMA) / (2·σ).
+
+    Négatif sous la bande médiane (pression vendeuse), positif au-dessus.
+    Convention : σ = 0 (cours parfaitement plats) → 0.0 plutôt que NaN, pour
+    ne pas invalider toute la matrice sur les séries peu volatiles.
+    """
+    p = _to_array(prices)
+    out = np.full_like(p, np.nan)
+    mid = sma(p, window)
+    sigma = rolling_volatility(p, window)
+    for i in range(len(p)):
+        if np.isfinite(mid[i]) and np.isfinite(sigma[i]):
+            out[i] = (p[i] - mid[i]) / (2.0 * sigma[i]) if sigma[i] > 0 else 0.0
+    return out
+
+
 def volume_ratio(volumes: list[float | None], window: int = 20) -> np.ndarray:
     """Volume du jour / volume moyen sur les `window` jours précédents.
 
@@ -139,6 +211,10 @@ FEATURE_COLUMNS = [
     "vol_20",
     "momentum_10",
     "volume_ratio_20",
+    # Features « visibles de la baisse » (ajout v3 — voir docstring du module).
+    "drawdown_20",
+    "sma20_slope",
+    "bb_pos",
 ]
 
 
@@ -186,13 +262,20 @@ def build_feature_matrix(
     price_sma20 = closes_arr / sma20
     price_sma50 = closes_arr / sma50
 
+    # Features « visibles de la baisse » : drawdown au plus haut récent,
+    # pente de la SMA20 et position dans les bandes de Bollinger.
+    drawdown_20 = drawdown(closes, 20)
+    sma20_slope = sma_slope(sma20, 5)
+    bb_pos = bollinger_pos(closes, 20)
+
     # Cible : rendement cumulé sur `horizon` jours futurs.
     target = np.full(n, np.nan)
     if n > horizon:
         target[: n - horizon] = closes_arr[horizon:] / closes_arr[: n - horizon] - 1.0
 
     X = np.column_stack(
-        [ret1, ret5, ret10, price_sma20, price_sma50, rsi14, vol20, mom10, vol_ratio]
+        [ret1, ret5, ret10, price_sma20, price_sma50, rsi14, vol20, mom10,
+         vol_ratio, drawdown_20, sma20_slope, bb_pos]
     )
     y = target
 

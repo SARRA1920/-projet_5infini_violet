@@ -638,3 +638,111 @@
   color: var(--ia-text);
   font-size: 1.05rem;
 }
+
+/* --- Backtest : case à cocher + table de décisions --- */
+.ia-form .ia-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ia-form .ia-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2f7cf6;
+}
+
+.ia-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.ia-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: var(--ia-text, #e8eef8);
+}
+.ia-table th,
+.ia-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+.ia-table th {
+  color: #93a0b5;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ia-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* --- Diagnostic du modèle (page Prédiction) --- */
+.ia-diagnostics {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.ia-diagnostics h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+.diag-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+@media (max-width: 720px) {
+  .diag-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.diag-block h4 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: #93a0b5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.diag-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.diag-table th,
+.diag-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.diag-table th {
+  color: #93a0b5;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.diag-ic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.diag-ic-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.diag-ic-list li span {
+  color: #e8eef8;
+}
+.diag-ic-list strong.up { color: #2ee6a8; }
+.diag-ic-list strong.down { color: #ff5d73; }

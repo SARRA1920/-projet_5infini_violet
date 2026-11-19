@@ -100,6 +100,59 @@ class TestVolumeRatio:
         assert np.all(np.isnan(vr))
 
 
+class TestRollingMax:
+    def test_basic(self):
+        prices = [1.0, 5.0, 3.0, 7.0, 2.0]
+        m = F.rolling_max(prices, window=3)
+        assert np.isnan(m[0]) and np.isnan(m[1])
+        assert np.isclose(m[2], 5.0)   # max(1, 5, 3)
+        assert np.isclose(m[3], 7.0)   # max(5, 3, 7)
+        assert np.isclose(m[4], 7.0)   # max(3, 7, 2)
+
+    def test_too_short(self):
+        assert np.all(np.isnan(F.rolling_max([1.0, 2.0], window=5)))
+
+
+class TestBearishFeatures:
+    """Features ajoutées pour rendre les baisses visibles du modèle (v3)."""
+
+    def test_drawdown_detects_crash(self):
+        # 70 jours à 100 puis 5 jours à 90 : le dernier jour, le prix est
+        # 10 % sous le plus haut des 20 derniers jours. Au sommet (jour 69),
+        # il ÉTAIT le plus haut : drawdown = 0.
+        prices = [100.0] * 70 + [90.0] * 5
+        d = F.drawdown(prices, window=20)
+        assert np.all(np.isnan(d[:19]))       # fenêtre pas encore remplie
+        assert np.isclose(d[69], 0.0)
+        assert np.isclose(d[-1], -0.10)
+
+    def test_drawdown_never_positive(self):
+        d = F.drawdown(_trending_prices(60), window=20)
+        assert np.all(d[19:] <= 1e-12)
+
+    def test_sma20_slope_sign_follows_trend(self):
+        rising = [100.0 + i for i in range(60)]
+        falling = [160.0 - i for i in range(60)]
+        assert F.sma_slope(F.sma(rising, 20), 5)[-1] > 0
+        assert F.sma_slope(F.sma(falling, 20), 5)[-1] < 0
+
+    def test_bb_pos_sign_and_flat_convention(self):
+        above = [100.0] * 25 + [130.0]
+        below = [100.0] * 25 + [70.0]
+        assert F.bollinger_pos(above, 20)[-1] > 0
+        assert F.bollinger_pos(below, 20)[-1] < 0
+        # Cours parfaitement plats : σ = 0 → 0.0 par convention (pas NaN,
+        # sinon toute la matrice serait invalide sur les séries calmes).
+        flat = F.bollinger_pos([100.0] * 40, 20)
+        assert flat[-1] == 0.0
+
+    def test_matrix_has_12_features(self):
+        prices = _trending_prices(120)
+        X, _, _ = F.build_feature_matrix(prices, None, horizon=5)
+        assert X.shape[1] == 12
+        assert len(F.FEATURE_COLUMNS) == 12
+
+
 class TestBuildFeatureMatrix:
     def test_shapes(self):
         prices = _trending_prices(120)

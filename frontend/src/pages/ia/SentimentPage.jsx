@@ -54,8 +54,11 @@ export default function SentimentPage() {
       <div className="ia-panel">
         <h2>Analyser un texte</h2>
         <p className="ia-help">
-          Collez un titre d'actualité ou un commentaire financier. Le module utilise VADER (ou un
-          lexique de fallback) pour produire un score entre -1 (très négatif) et +1 (très positif).
+          Collez un titre d'actualité ou un commentaire financier. Le moteur est
+          multilingue : lexique financier français (négation, intensifiants) pour un
+          texte FR, VADER ou lexique financier anglais pour un texte EN — score entre
+          -1 (très négatif) et +1 (très positif). La « méthode » affiche le moteur
+          réellement utilisé.
         </p>
         <form className="ia-form" onSubmit={analyzeText}>
           <textarea
@@ -93,8 +96,10 @@ export default function SentimentPage() {
         <h2>Sentiment par actif</h2>
         <p className="ia-help">
           Récupère le sentiment agrégé des titres d'actualité associés à un symbole.
-          Les titres proviennent du flux RSS Yahoo Finance (sans clé API) ; le score
-          global est la moyenne du sentiment VADER de chaque titre, entre -1 et +1.
+          Les titres proviennent du flux RSS Yahoo Finance (repli Google News) et sont
+          <strong> filtrés</strong> : seuls les titres mentionnant le ticker ou le nom
+          de l'entreprise sont analysés. Le scoring est multilingue (FR/EN) ; le score
+          global est la moyenne des titres pertinents, entre -1 et +1.
         </p>
         <form className="ia-form" onSubmit={fetchSymbol}>
           <label>
@@ -137,8 +142,16 @@ export default function SentimentPage() {
               </ul>
             ) : (
               <p className="banner">
-                Aucun titre récupéré pour {symbolData.symbol} pour l'instant — la source
-                RSS (Yahoo Finance) est momentanément indisponible. Réessayez dans quelques minutes.
+                Aucun titre pertinent pour {symbolData.symbol} pour l'instant — soit la
+                source RSS (Yahoo Finance / Google News) est momentanément indisponible,
+                soit aucun titre récent ne mentionne {symbolData.symbol}. Le score global
+                reste neutre tant qu'aucun titre pertinent n'est trouvé.
+              </p>
+            )}
+            {symbolData.headlines.length > 0 && (
+              <p className="sentiment-source">
+                Méthode : {symbolData.source} — {symbolData.headlines.length} titre(s)
+                pertinent(s) après filtrage
               </p>
             )}
           </div>
