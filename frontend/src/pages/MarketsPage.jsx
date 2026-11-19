@@ -31,6 +31,15 @@ function compareRows(a, b) {
   );
 }
 
+const GROUP_COLOR = { actions: "var(--g-actions)", devises: "var(--g-devises)", matieres: "var(--g-matieres)" };
+
+// Initiales affichees dans l'avatar : deux lettres les plus significatives du nom.
+function initials(name) {
+  const words = name.replace(/[^\p{L}\s]/gu, "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (words[0] || "?").slice(0, 2).toUpperCase();
+}
+
 export default function MarketsPage() {
   const [params] = useSearchParams();
   const [group, setGroup] = useState("tous");
@@ -143,12 +152,21 @@ export default function MarketsPage() {
             {rows.map((row) => (
               <tr key={row.symbol}>
                 <td>
-                  <strong>{row.name}</strong>
-                  <span>{row.symbol}</span>
+                  <div className="instrument">
+                    <span className="instrument-avatar" style={{ "--g": GROUP_COLOR[row.group] }}>
+                      {initials(row.name)}
+                    </span>
+                    <span className="instrument-id">
+                      <strong>{row.name}</strong>
+                      <span>{row.symbol}</span>
+                    </span>
+                  </div>
                 </td>
-                <td>{row.last}</td>
+                <td className="price">
+                  <strong>{row.last}</strong>
+                </td>
                 <td>
-                  <span className={`change-pill ${row.up ? "up" : "down"}`}>{row.change}</span>
+                  <span className={`trend-value ${row.up ? "up" : "down"}`}>{row.change}</span>
                 </td>
                 <td>{row.high}</td>
                 <td>{row.low}</td>
