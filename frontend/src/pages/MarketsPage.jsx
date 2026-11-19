@@ -2,11 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { filters, quotes as maquetteQuotes } from "../data/maquette.js";
 
-function Sparkline({ points, up }) {
-  const d = points.map((y, index) => `${index ? "L" : "M"}${index * 16},${y}`).join(" ");
+function Sparkline({ points, up, id }) {
+  const line = points.map((y, index) => `${index ? "L" : "M"}${index * 16},${y}`).join(" ");
+  const area = `${line} L${(points.length - 1) * 16},28 L0,28 Z`;
+  const color = up ? "#3dd68c" : "#ff5d73";
+  const gradientId = `spark-fill-${String(id).replace(/[^a-zA-Z0-9]/g, "")}`;
   return (
     <svg className="spark" viewBox="0 0 96 28" width="96" height="28" aria-hidden="true">
-      <path d={d} fill="none" stroke={up ? "#3dd68c" : "#ff5d73"} strokeWidth="2" />
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradientId})`} stroke="none" />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -137,12 +147,14 @@ export default function MarketsPage() {
                   <span>{row.symbol}</span>
                 </td>
                 <td>{row.last}</td>
-                <td className={row.up ? "up" : "down"}>{row.change}</td>
+                <td>
+                  <span className={`change-pill ${row.up ? "up" : "down"}`}>{row.change}</span>
+                </td>
                 <td>{row.high}</td>
                 <td>{row.low}</td>
                 <td>{row.volume}</td>
                 <td>
-                  <Sparkline points={row.spark} up={row.up} />
+                  <Sparkline points={row.spark} up={row.up} id={row.symbol} />
                 </td>
               </tr>
             ))}
