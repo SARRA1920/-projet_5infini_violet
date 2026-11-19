@@ -133,8 +133,8 @@ export default function MarketsPage() {
             {rows.map((row) => (
               <tr key={row.symbol}>
                 <td>
-                  <strong>{row.symbol}</strong>
-                  <span>{row.name}</span>
+                  <strong>{row.name}</strong>
+                  <span>{row.symbol}</span>
                 </td>
                 <td>{row.last}</td>
                 <td className={row.up ? "up" : "down"}>{row.change}</td>
