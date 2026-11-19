@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('portfolio_id', sa.Integer(), sa.ForeignKey('portfolios.id'), nullable=False),
         sa.Column('asset_id', sa.Integer(), sa.ForeignKey('assets.id'), nullable=False),
-        sa.Column('side', sa.Enum('BUY', 'SELL', name='transactionside'), nullable=False),
+        sa.Column('side', sa.Enum('BUY', 'SELL', name='transactionside', create_type=False), nullable=False),
         sa.Column(
             'order_type',
             sa.Enum('LIMIT', 'STOP_LOSS', 'TAKE_PROFIT', name='pendingordertype'),
