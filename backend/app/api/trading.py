@@ -6,10 +6,20 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.models import Asset, Portfolio, Position, Transaction, TransactionSide, User
+from app.models.models import (
+    Asset,
+    PendingOrder,
+    Portfolio,
+    Position,
+    Transaction,
+    TransactionSide,
+    User,
+)
 from app.schemas.trading import (
+    LimitOrderRequest,
     OrderPreviewOut,
     OrderRequest,
+    PendingOrderOut,
     PerformancePoint,
     PortfolioOut,
     PositionOut,
@@ -32,6 +42,8 @@ from app.services.trading import (
     InsufficientPositionError,
     InvalidOrderError,
     PortfolioNotFoundError,
+    cancel_pending_order,
+    place_limit_order,
     place_order,
 )
 
@@ -257,3 +269,73 @@ def transactions(
         .limit(limit)
     ).all()
     return [_transaction_out(t) for t in rows]
+
+def _pending_order_out(order: PendingOrder) -> PendingOrderOut:
+    return PendingOrderOut(
+        id=order.id,
+        symbol=order.asset.symbol,
+        side=order.side,
+        order_type=order.order_type,
+        quantity=order.quantity,
+        trigger_price=order.trigger_price,
+        status=order.status,
+        note=order.note,
+        created_at=order.created_at,
+        executed_at=order.executed_at,
+    )
+
+
+@router.post("/orders/limit", response_model=PendingOrderOut, status_code=status.HTTP_201_CREATED)
+def create_limit_order(
+    body: LimitOrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Place un ordre à cours limité : reste en attente dans le carnet d'ordre
+    jusqu'à ce que le planificateur constate que le cours a atteint le seuil."""
+    portfolio = _user_portfolio(db, current_user)
+    try:
+        order = place_limit_order(
+            db, portfolio.id, body.symbol, body.side, body.quantity, body.trigger_price
+        )
+    except (InvalidOrderError, InsufficientPositionError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except PriceUnavailableError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    db.commit()
+    db.refresh(order)
+    return _pending_order_out(order)
+
+
+@router.get("/orders/pending", response_model=list[PendingOrderOut])
+def list_pending_orders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Carnet d'ordre du portefeuille : ordres en attente, exécutés ou annulés (les plus récents d'abord)."""
+    portfolio = _user_portfolio(db, current_user)
+    rows = db.scalars(
+        select(PendingOrder)
+        .options(joinedload(PendingOrder.asset))
+        .where(PendingOrder.portfolio_id == portfolio.id)
+        .order_by(PendingOrder.created_at.desc())
+    ).all()
+    return [_pending_order_out(o) for o in rows]
+
+
+@router.delete("/orders/pending/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_pending_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Annule un ordre en attente (sans effet sur un ordre déjà exécuté)."""
+    portfolio = _user_portfolio(db, current_user)
+    try:
+        cancel_pending_order(db, portfolio.id, order_id)
+    except InvalidOrderError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    db.commit()

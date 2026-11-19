@@ -10,8 +10,20 @@ from app.api.quotes import router as quotes_router
 from app.api.stress import router as stress_router
 from app.api.trading import router as trading_router
 from app.ia.api import router as ia_router
+from app.core.scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI(title="Simulateur de Salle de Marché")
+
+
+@app.on_event("startup")
+def _on_startup():
+    """Démarre le planificateur du carnet d'ordre (stop-loss, take-profit, ordres limite)."""
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+def _on_shutdown():
+    stop_scheduler()
 
 app.add_middleware(
     CORSMiddleware,

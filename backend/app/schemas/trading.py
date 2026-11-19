@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.models.models import TransactionSide
+from app.models.models import PendingOrderStatus, PendingOrderType, TransactionSide
 
 
 class OrderRequest(BaseModel):
@@ -96,3 +96,25 @@ class PerformancePoint(BaseModel):
 
     date: Date
     value: Decimal
+
+
+class LimitOrderRequest(BaseModel):
+    """Ordre à cours limité : achat si le cours descend à trigger_price (ou moins),
+    vente si le cours monte à trigger_price (ou plus)."""
+    symbol: str = Field(min_length=1, max_length=20)
+    side: TransactionSide
+    quantity: Decimal = Field(gt=0, max_digits=18, decimal_places=6)
+    trigger_price: Decimal = Field(gt=0)
+
+
+class PendingOrderOut(BaseModel):
+    id: int
+    symbol: str
+    side: TransactionSide
+    order_type: PendingOrderType
+    quantity: Decimal
+    trigger_price: Decimal
+    status: PendingOrderStatus
+    note: str | None = None
+    created_at: datetime
+    executed_at: datetime | None = None
