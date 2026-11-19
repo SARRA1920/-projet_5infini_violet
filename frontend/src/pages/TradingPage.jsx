@@ -36,10 +36,24 @@ export default function TradingPage() {
   const [notice, setNotice] = useState("");
   const [preview, setPreview] = useState(null);
 
+  // Carnet d'ordre (ordres à cours limité)
+  const [limitSide, setLimitSide] = useState("buy");
+  const [limitQuantity, setLimitQuantity] = useState("");
+  const [limitTrigger, setLimitTrigger] = useState("");
+  const [limitBusy, setLimitBusy] = useState(false);
+  const [limitError, setLimitError] = useState("");
+  const [pendingOrders, setPendingOrders] = useState([]);
+
   function loadPortfolio() {
     return api("/trading/portfolio")
       .then(setPortfolio)
       .catch((err) => setNotice(`Portefeuille indisponible : ${err.message}`));
+  }
+
+  function loadPendingOrders() {
+    return api("/trading/orders/pending")
+      .then(setPendingOrders)
+      .catch(() => {});
   }
 
   useEffect(() => {
@@ -52,6 +66,7 @@ export default function TradingPage() {
       })
       .catch((err) => setNotice(`Cours indisponibles : ${err.message}`));
     loadPortfolio();
+    loadPendingOrders();
   }, []);
 
   // Simulation de l'ordre : recalculée 0,4 s après la dernière modification.
@@ -126,6 +141,43 @@ export default function TradingPage() {
     }
   }
 
+  async function onSubmitLimit(event) {
+    event.preventDefault();
+    setLimitError("");
+    if (!limitQuantity.trim() || !limitTrigger.trim()) {
+      setLimitError("Indiquez une quantité et un prix déclencheur.");
+      return;
+    }
+    setLimitBusy(true);
+    try {
+      await api("/trading/orders/limit", {
+        method: "POST",
+        body: JSON.stringify({
+          symbol,
+          side: limitSide,
+          quantity: decimalText(limitQuantity),
+          trigger_price: decimalText(limitTrigger),
+        }),
+      });
+      setLimitQuantity("");
+      setLimitTrigger("");
+      await loadPendingOrders();
+    } catch (err) {
+      setLimitError(err.message);
+    } finally {
+      setLimitBusy(false);
+    }
+  }
+
+  async function cancelOrder(orderId) {
+    try {
+      await api(`/trading/orders/pending/${orderId}`, { method: "DELETE" });
+      await loadPendingOrders();
+    } catch (err) {
+      setLimitError(err.message);
+    }
+  }
+
   // Filtrer les actifs pour ne montrer que ceux de l'onglet actif
   const filteredQuotes = quotes.filter((row) => row.group === activeGroup);
   const selected = quotes.find((row) => row.symbol === symbol);
@@ -165,7 +217,7 @@ export default function TradingPage() {
         <div className="panel-head">
           <div>
             <h2>Nouvel ordre</h2>
-            <p>Stop loss et take profit sont enregistrés avec l'achat, sans exécution automatique.</p>
+            <p>Stop loss et take profit sont surveillés en continu et exécutés automatiquement dès que le seuil est atteint.</p>
           </div>
         </div>
 
@@ -270,6 +322,111 @@ export default function TradingPage() {
             {formatDecimal(result.quantity, 0)} {result.symbol} au prix de{" "}
             {formatDecimal(result.price)}.
           </p>
+        )}
+      </article>
+
+      <article className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Carnet d'ordre</h2>
+            <p>
+              Ordre à cours limité sur {symbol || "—"} : reste en attente jusqu'à ce que le cours
+              atteigne le prix déclencheur, vérifié automatiquement en tâche de fond.
+            </p>
+          </div>
+        </div>
+
+        <form className="trade-form" onSubmit={onSubmitLimit}>
+          <div className="trade-field">
+            <span>Sens</span>
+            <div className="ranges">
+              {SIDES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={item.id === limitSide ? "range active" : "range"}
+                  onClick={() => setLimitSide(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="trade-field">
+            <span>Quantité</span>
+            <input
+              inputMode="decimal"
+              value={limitQuantity}
+              onChange={(event) => setLimitQuantity(event.target.value)}
+              placeholder="ex. 10"
+            />
+          </label>
+          <label className="trade-field">
+            <span>Prix déclencheur</span>
+            <input
+              inputMode="decimal"
+              value={limitTrigger}
+              onChange={(event) => setLimitTrigger(event.target.value)}
+              placeholder={
+                limitSide === "buy" ? "Inférieur au cours actuel" : "Supérieur au cours actuel"
+              }
+            />
+          </label>
+          <button className="primary-btn" type="submit" disabled={limitBusy || !symbol}>
+            {limitBusy ? "Envoi..." : "Placer l'ordre"}
+          </button>
+        </form>
+        {limitError && <p className="trade-error">{limitError}</p>}
+
+        {pendingOrders.length > 0 ? (
+          <table className="order-book-table">
+            <thead>
+              <tr>
+                <th>Actif</th>
+                <th>Type</th>
+                <th>Sens</th>
+                <th>Quantité</th>
+                <th>Seuil</th>
+                <th>Statut</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingOrders.map((order) => (
+                <tr key={order.id}>
+                  <td>{order.symbol}</td>
+                  <td>
+                    {order.order_type === "limit"
+                      ? "Limite"
+                      : order.order_type === "stop_loss"
+                      ? "Stop loss"
+                      : "Take profit"}
+                  </td>
+                  <td>{order.side === "buy" ? "Achat" : "Vente"}</td>
+                  <td>{formatDecimal(order.quantity, 0)}</td>
+                  <td>{formatDecimal(order.trigger_price)}</td>
+                  <td>
+                    <span className={`order-status ${order.status}`}>
+                      {order.status === "pending"
+                        ? "En attente"
+                        : order.status === "executed"
+                        ? "Exécuté"
+                        : "Annulé"}
+                    </span>
+                  </td>
+                  <td>
+                    {order.status === "pending" && (
+                      <button type="button" className="order-cancel" onClick={() => cancelOrder(order.id)}>
+                        Annuler
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="trade-warning">Aucun ordre dans le carnet pour l'instant.</p>
         )}
       </article>
     </section>

@@ -41,6 +41,19 @@ class TransactionSide(str, enum.Enum):
     SELL = "sell"
 
 
+class PendingOrderType(str, enum.Enum):
+    """Nature de l'ordre en attente dans le carnet d'ordre."""
+    LIMIT = "limit"              # achat/vente dès que le cours atteint trigger_price
+    STOP_LOSS = "stop_loss"      # clôture automatique si le cours descend au seuil
+    TAKE_PROFIT = "take_profit"  # clôture automatique si le cours monte au seuil
+
+
+class PendingOrderStatus(str, enum.Enum):
+    PENDING = "pending"      # en attente, surveillé par le planificateur
+    EXECUTED = "executed"    # condition atteinte, converti en Transaction
+    CANCELLED = "cancelled"  # annulé par le joueur, ou fonds insuffisants au déclenchement
+
+
 class BankType(str, enum.Enum):
     CONVENTIONAL = "conventional"
     NON_CONVENTIONAL = "non_conventional"
@@ -172,6 +185,40 @@ class Transaction(Base):
     executed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="transactions")
+    asset: Mapped["Asset"] = relationship()
+
+
+class PendingOrder(Base):
+    """Carnet d'ordre : ordre en attente d'une condition de prix.
+
+    Un planificateur en tâche de fond (APScheduler, voir app.core.scheduler)
+    vérifie régulièrement ces ordres contre le dernier cours connu et les
+    exécute via app.services.trading.place_order dès que la condition est
+    remplie :
+      - LIMIT achat  : exécuté si current_price <= trigger_price
+      - LIMIT vente  : exécuté si current_price >= trigger_price
+      - STOP_LOSS    : exécuté (vente) si current_price <= trigger_price
+      - TAKE_PROFIT  : exécuté (vente) si current_price >= trigger_price
+    """
+
+    __tablename__ = "pending_orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    portfolio_id: Mapped[int] = mapped_column(ForeignKey("portfolios.id"))
+    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"))
+    side: Mapped[TransactionSide] = mapped_column(Enum(TransactionSide))
+    order_type: Mapped[PendingOrderType] = mapped_column(Enum(PendingOrderType))
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    trigger_price: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    status: Mapped[PendingOrderStatus] = mapped_column(
+        Enum(PendingOrderStatus), default=PendingOrderStatus.PENDING
+    )
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.id"), nullable=True)
+
+    portfolio: Mapped["Portfolio"] = relationship()
     asset: Mapped["Asset"] = relationship()
 
 

@@ -9,7 +9,16 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.models import Asset, Portfolio, Position, Transaction, TransactionSide
+from app.models.models import (
+    Asset,
+    PendingOrder,
+    PendingOrderStatus,
+    PendingOrderType,
+    Portfolio,
+    Position,
+    Transaction,
+    TransactionSide,
+)
 from app.services.prices import get_current_price
 
 CASH_STEP = Decimal("0.01")
@@ -161,3 +170,88 @@ def place_order(
     db.add(transaction)
     db.flush()  # attribue transaction.id ; rien n'est validé tant que l'appelant ne commit pas
     return transaction
+
+
+# ---------- Carnet d'ordre : ordres en attente d'une condition de prix ----------
+def place_limit_order(
+    db: Session,
+    portfolio_id: int,
+    symbol: str,
+    side: TransactionSide,
+    quantity: Decimal,
+    trigger_price: Decimal,
+) -> PendingOrder:
+    """Crée un ordre à cours limité, en attente dans le carnet d'ordre.
+
+    Rien n'est débité du cash ni de la position tout de suite : l'ordre
+    n'est exécuté (via place_order) que lorsque le planificateur en tâche
+    de fond constate que la condition de prix est remplie.
+
+      - achat limite : s'exécute si le cours descend à trigger_price ou moins
+      - vente limite : s'exécute si le cours monte à trigger_price ou plus
+    """
+    try:
+        side = TransactionSide(side)
+    except ValueError:
+        raise InvalidOrderError(f"Sens d'ordre inconnu : {side}") from None
+    _check_decimal("quantity", quantity)
+    if quantity <= 0:
+        raise InvalidOrderError("La quantité doit être strictement positive")
+    _check_decimal("trigger_price", trigger_price)
+    if trigger_price <= 0:
+        raise InvalidOrderError("Le prix déclencheur doit être strictement positif")
+
+    symbol = symbol.strip().upper()
+    asset = db.scalar(select(Asset).where(Asset.symbol == symbol))
+    if asset is None:
+        raise InvalidOrderError(f"Symbole inconnu : {symbol}")
+    price = get_current_price(db, symbol)
+
+    if side == TransactionSide.BUY and trigger_price >= price:
+        raise InvalidOrderError(
+            f"Un achat limite doit viser un prix inférieur au cours actuel ({price})"
+        )
+    if side == TransactionSide.SELL and trigger_price <= price:
+        raise InvalidOrderError(
+            f"Une vente limite doit viser un prix supérieur au cours actuel ({price})"
+        )
+    if side == TransactionSide.SELL:
+        position = db.scalar(
+            select(Position).where(
+                Position.portfolio_id == portfolio_id, Position.asset_id == asset.id
+            )
+        )
+        held = position.quantity if position is not None and position.is_open else Decimal("0")
+        if quantity > held:
+            raise InsufficientPositionError(
+                f"Position insuffisante sur {asset.symbol} : {held} détenu, {quantity} demandé"
+            )
+
+    order = PendingOrder(
+        portfolio_id=portfolio_id,
+        asset_id=asset.id,
+        side=side,
+        order_type=PendingOrderType.LIMIT,
+        quantity=_round(quantity, QUANTITY_STEP),
+        trigger_price=_round(trigger_price, PRICE_STEP),
+        status=PendingOrderStatus.PENDING,
+    )
+    db.add(order)
+    db.flush()
+    return order
+
+
+def cancel_pending_order(db: Session, portfolio_id: int, order_id: int) -> PendingOrder:
+    """Annule un ordre en attente (pas encore exécuté) du portefeuille donné."""
+    order = db.scalar(
+        select(PendingOrder).where(
+            PendingOrder.id == order_id, PendingOrder.portfolio_id == portfolio_id
+        )
+    )
+    if order is None:
+        raise InvalidOrderError("Ordre introuvable")
+    if order.status != PendingOrderStatus.PENDING:
+        raise InvalidOrderError("Cet ordre n'est plus en attente, impossible de l'annuler")
+    order.status = PendingOrderStatus.CANCELLED
+    db.flush()
+    return order
