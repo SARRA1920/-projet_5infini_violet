@@ -92,8 +92,9 @@ export default function SentimentPage() {
       <div className="ia-panel">
         <h2>Sentiment par actif</h2>
         <p className="ia-help">
-          Récupère le sentiment agrégé des titres d'actualité associés à un symbole. Pour l'instant,
-          la source de news est un stub — connectez une API (NewsAPI, RSS) pour des données réelles.
+          Récupère le sentiment agrégé des titres d'actualité associés à un symbole.
+          Les titres proviennent du flux RSS Yahoo Finance (sans clé API) ; le score
+          global est la moyenne du sentiment VADER de chaque titre, entre -1 et +1.
         </p>
         <form className="ia-form" onSubmit={fetchSymbol}>
           <label>
@@ -136,8 +137,8 @@ export default function SentimentPage() {
               </ul>
             ) : (
               <p className="banner">
-                Aucun titre disponible pour {symbolData.symbol}. La source de news n'est pas encore
-                connectée (voir <code>backend/app/ia/sentiment.py → fetch_headlines</code>).
+                Aucun titre récupéré pour {symbolData.symbol} pour l'instant — la source
+                RSS (Yahoo Finance) est momentanément indisponible. Réessayez dans quelques minutes.
               </p>
             )}
           </div>

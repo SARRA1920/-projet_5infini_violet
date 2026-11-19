@@ -10,15 +10,21 @@ pré-entraîné sur du texte financier. FinBERT est plus précis mais pèse
 build Docker et de télécharger le modèle au premier démarrage. L'interface
 publique (fonction `analyze_sentiment`) restera identique.
 
-Source de news : pour l'instant un endpoint qui analyse un texte fourni par
-l'utilisateur ou des titres simulés. L'intégration d'une API de news réelles
-(NewsAPI, RSS Reuters/Bloomberg) est prévue mais nécessite une clé API —
-on garde l'architecture prête (fonction `fetch_headlines` en stub).
+Source de news : la fonction `fetch_headlines` interroge le flux RSS de
+Yahoo Finance (spécifique au ticker, sans clé API), avec un repli sur
+Google News RSS. Les titres sont mis en cache 15 minutes. Une API dédiée
+(NewsAPI, Finnhub) ou un meilleur scorer (FinBERT) reste une évolution
+possible, mais la brique sentiment est désormais fonctionnelle bout en bout.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
+import urllib.request
+import urllib.parse
+import xml.etree.ElementTree as ET
+from html import unescape
 
 # Lexique financier minimal (français + anglais) pour un fallback sans VADER.
 # Score entre -1 (très négatif) et +1 (très positif).
@@ -124,13 +130,85 @@ def aggregate_sentiment(titles: list[str]) -> tuple[float, str, list[HeadlineSen
     return avg, _label_from_score(avg), details
 
 
-def fetch_headlines(symbol: str) -> list[str]:
-    """Récupère les titres d'actualité pour un symbole.
+# Cache en mémoire des titres par symbole (TTL 15 min) : on évite d'interroger
+# le flux RSS à chaque rendu de page ou chaque appel de l'agent.
+_HEADLINE_CACHE: dict[str, tuple[float, list[str]]] = {}
+_HEADLINE_CACHE_TTL = 900          # 15 minutes
+_RSS_TIMEOUT = 5                   # secondes — on ne bloque jamais l'API
+_MAX_HEADLINES = 10
 
-    STUB : renvoie des titres simulés pour la démo. L'intégration d'une vraie
-    source (NewsAPI / RSS) nécessite une clé API — voir le commentaire en tête
-    de fichier. À remplacer par un vrai fetch quand la clé sera disponible.
+
+def _fetch_rss_titles(url: str) -> list[str]:
+    """Télécharge un flux RSS et renvoie la liste des titres d'items."""
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "TradeLab/1.0 (+projet pédagogique)"}
+    )
+    with urllib.request.urlopen(req, timeout=_RSS_TIMEOUT) as resp:
+        raw = resp.read()
+    root = ET.fromstring(raw)
+    titles = []
+    for item in root.iter("item"):
+        t = item.findtext("title")
+        if t:
+            titles.append(unescape(t).strip())
+    return titles
+
+
+def _yahoo_headlines(symbol: str) -> list[str]:
+    """Flux RSS Yahoo Finance — titres spécifiques au ticker, sans clé API."""
+    sym = urllib.parse.quote(symbol)
+    url = (
+        "https://feeds.finance.yahoo.com/rss/2.0/headline"
+        f"?s={sym}&region=US&lang=en-US"
+    )
+    return _fetch_rss_titles(url)
+
+
+def _google_headlines(symbol: str) -> list[str]:
+    """Repli : flux RSS Google News sur la requête « {SYMBOL} stock »."""
+    query = urllib.parse.quote(f"{symbol} stock")
+    url = (
+        "https://news.google.com/rss/search"
+        f"?q={query}&hl=en&gl=US&ceid=US:en"
+    )
+    return _fetch_rss_titles(url)
+
+
+def fetch_headlines(symbol: str) -> list[str]:
+    """Récupère les titres d'actualité pour un symbole boursier.
+
+    Source : Yahoo Finance RSS (spécifique au ticker, sans clé API), avec
+    repli sur Google News RSS. Les titres sont mis en cache 15 minutes pour
+    limiter les appels réseau. Toute erreur (réseau, parsing, source
+    indisponible) est absorbée : on renvoie une liste vide plutôt que de
+    planter l'API — le sentiment n'est alors simplement pas contributif.
     """
-    # Titres neutres par défaut pour ne pas biaiser l'agent tant qu'on n'a
-    # pas de vraie source de news.
-    return []
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return []
+
+    now = time.time()
+    cached = _HEADLINE_CACHE.get(sym)
+    if cached and (now - cached[0]) < _HEADLINE_CACHE_TTL:
+        return cached[1]
+
+    titles: list[str] = []
+    for source in (_yahoo_headlines, _google_headlines):
+        try:
+            raw_titles = source(sym)
+            # On filtre les titres vides et les en-têtes de flux (« Google News »).
+            titles = [
+                t for t in raw_titles if t and "Google News" not in t
+            ][:_MAX_HEADLINES]
+            if titles:
+                break
+        except Exception:
+            continue
+
+    _HEADLINE_CACHE[sym] = (now, titles)
+    return titles
+
+
+def clear_headline_cache() -> None:
+    """Vide le cache des titres (utilisé par les tests et /retrain)."""
+    _HEADLINE_CACHE.clear()
