@@ -38,7 +38,7 @@ const CARDS = [
   {
     to: "/ia/prediction",
     title: "Prédiction de cours",
-    desc: "RandomForest sur 9 features techniques. Rendement prédit à 1-21 jours avec intervalle de confiance issu des quantiles d'arbres.",
+    desc: "RandomForest sur 12 features techniques. Rendement prédit à 1-30 jours avec intervalle de confiance issu des quantiles d'arbres.",
     icon: "prediction",
   },
   {

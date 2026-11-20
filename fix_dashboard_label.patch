@@ -1,0 +1,13 @@
+diff --git a/frontend/src/pages/ia/IaDashboard.jsx b/frontend/src/pages/ia/IaDashboard.jsx
+index a23c38a..c4e352e 100644
+--- a/frontend/src/pages/ia/IaDashboard.jsx
++++ b/frontend/src/pages/ia/IaDashboard.jsx
+@@ -38,7 +38,7 @@ const CARDS = [
+   {
+     to: "/ia/prediction",
+     title: "Prédiction de cours",
+-    desc: "RandomForest sur 9 features techniques. Rendement prédit à 1-21 jours avec intervalle de confiance issu des quantiles d'arbres.",
++    desc: "RandomForest sur 12 features techniques. Rendement prédit à 1-30 jours avec intervalle de confiance issu des quantiles d'arbres.",
+     icon: "prediction",
+   },
+   {
