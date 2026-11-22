@@ -1,6 +1,6 @@
 /* Salles de jeu — thème "terminal de trading pro" (inspiré TradingView / Bitget / Capital.com) :
-   fond sombre neutre, bougies japonaises, panneaux denses collés les uns aux autres (pas de
-   cartes arrondies façon SaaS), accent turquoise pour les actions, vert/rouge pour les prix. */
+   fond sombre neutre, bougies japonaises, panneaux bien séparés avec de l'espace entre eux,
+   accent turquoise pour les actions, vert/rouge pour les prix. */
 
 .ag {
   --ag-bg: #0a0d13;
@@ -46,15 +46,16 @@
 .ag-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  background: var(--ag-border);
-  border-top: 1px solid var(--ag-border);
+  gap: 14px;
+  padding: 14px;
 }
 
-/* ---------- Carte de type (grille dense, pas de card arrondie isolée) ---------- */
+/* ---------- Carte de type (bloc isolé, avec espace autour) ---------- */
 .ag-card {
   position: relative;
   background: var(--ag-panel);
+  border: 1px solid var(--ag-border);
+  border-radius: 8px;
   padding: 1.1rem 1.2rem;
   display: flex;
   flex-direction: column;
