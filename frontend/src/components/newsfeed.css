@@ -1,0 +1,267 @@
+/* Fil d'actualités en direct (NewsFeed.jsx) — calque flottant global.
+   Même palette que le module IA : surfaces #121a2b, texte #e8eef8,
+   muted #93a0b5, bleu #2f7cf6, vert #3dd68c, rouge #ff5d73. */
+
+.newsfeed {
+  --nf-surface: #121a2b;
+  --nf-surface-2: #0f1828;
+  --nf-surface-3: #1a2540;
+  --nf-text: #e8eef8;
+  --nf-muted: #93a0b5;
+  --nf-border: rgba(255, 255, 255, 0.1);
+  --nf-blue: #2f7cf6;
+  --nf-up: #3dd68c;
+  --nf-down: #ff5d73;
+  --nf-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Bouton d'ouverture (coin bas-droit, sous le contenu) ---- */
+.newsfeed .nf-toggle {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.95rem;
+  background: var(--nf-blue);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--nf-shadow);
+  transition: transform 0.15s, background 0.15s;
+}
+.newsfeed .nf-toggle:hover {
+  transform: translateY(-1px);
+  background: #1d4ed8;
+}
+.newsfeed .nf-toggle em {
+  font-style: normal;
+  background: #ff5d73;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.3rem;
+}
+
+/* ---- Pop-up : une carte à la fois, au-dessus du bouton ---- */
+.newsfeed .nf-popup {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 4.6rem;
+  z-index: 81;
+  width: min(360px, calc(100vw - 2.5rem));
+  background: var(--nf-surface);
+  border: 1px solid var(--nf-border);
+  border-left: 3px solid var(--nf-blue);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  box-shadow: var(--nf-shadow);
+  animation: nf-slide-in 0.28s ease-out;
+}
+.newsfeed .nf-popup.up {
+  border-left-color: var(--nf-up);
+}
+.newsfeed .nf-popup.down {
+  border-left-color: var(--nf-down);
+}
+@keyframes nf-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .newsfeed .nf-popup {
+    animation: none;
+  }
+}
+
+.newsfeed .nf-popup-head,
+.newsfeed .nf-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--nf-muted);
+}
+.newsfeed .nf-popup-head {
+  margin-bottom: 0.35rem;
+}
+.newsfeed .nf-symbols {
+  font-weight: 700;
+  color: var(--nf-text);
+  letter-spacing: 0.02em;
+}
+.newsfeed .nf-age {
+  flex: 1;
+  text-align: right;
+}
+.newsfeed .nf-close {
+  background: none;
+  border: none;
+  color: var(--nf-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+}
+.newsfeed .nf-close:hover {
+  color: #fff;
+}
+
+.newsfeed .nf-popup-title,
+.newsfeed .nf-title {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--nf-text);
+}
+.newsfeed .nf-popup-title a,
+.newsfeed .nf-title a,
+.newsfeed .nf-title p {
+  color: var(--nf-text);
+  text-decoration: none;
+  display: block;
+}
+.newsfeed .nf-popup-title a:hover,
+.newsfeed .nf-title a:hover {
+  text-decoration: underline;
+  color: #fff;
+}
+
+.newsfeed .nf-popup-foot {
+  margin-top: 0.45rem;
+}
+
+/* ---- Badge de sentiment (même code couleur que le module IA) ---- */
+.newsfeed .nf-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--nf-surface-3);
+  color: var(--nf-muted);
+}
+.newsfeed .nf-badge.up {
+  background: rgba(61, 214, 140, 0.14);
+  color: var(--nf-up);
+}
+.newsfeed .nf-badge.down {
+  background: rgba(255, 93, 115, 0.14);
+  color: var(--nf-down);
+}
+
+/* ---- Panneau repliable : l'historique du fil ---- */
+.newsfeed .nf-panel {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 4.6rem;
+  z-index: 81;
+  width: min(400px, calc(100vw - 2.5rem));
+  max-height: min(540px, calc(100vh - 8rem));
+  display: flex;
+  flex-direction: column;
+  background: var(--nf-surface);
+  border: 1px solid var(--nf-border);
+  border-radius: 14px;
+  box-shadow: var(--nf-shadow);
+  overflow: hidden;
+}
+.newsfeed .nf-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--nf-border);
+  font-size: 0.9rem;
+}
+.newsfeed .nf-panel-head strong {
+  flex: 1;
+  color: var(--nf-text);
+}
+.newsfeed .nf-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.newsfeed .nf-panel-actions button {
+  background: none;
+  border: 1px solid var(--nf-border);
+  color: var(--nf-muted);
+  font-size: 0.72rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.newsfeed .nf-panel-actions button:hover {
+  color: #fff;
+  border-color: var(--nf-blue);
+}
+
+.newsfeed .nf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+.newsfeed .nf-list li {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--nf-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.newsfeed .nf-list li:last-child {
+  border-bottom: none;
+}
+.newsfeed .nf-list li.nf-unseen {
+  background: rgba(47, 124, 246, 0.08);
+}
+.newsfeed .nf-list li.nf-unseen .nf-symbols::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--nf-blue);
+  margin-right: 0.4rem;
+}
+.newsfeed .nf-list li.nf-empty {
+  color: var(--nf-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.newsfeed .nf-meta .nf-age {
+  flex: initial;
+}
+
+/* ---- Mobile : le calque occupe la largeur utile, plus de débordement ---- */
+@media (max-width: 640px) {
+  .newsfeed .nf-toggle {
+    right: 0.9rem;
+    bottom: 0.9rem;
+  }
+  .newsfeed .nf-popup,
+  .newsfeed .nf-panel {
+    right: 0.9rem;
+    bottom: 4.2rem;
+    width: calc(100vw - 1.8rem);
+  }
+}
