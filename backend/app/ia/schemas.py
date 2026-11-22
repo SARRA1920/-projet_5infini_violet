@@ -197,3 +197,26 @@ class BacktestOut(BaseModel):
     slippage_bps: float = Field(5.0, description="Slippage (points de base par côté)")
     retrain_every: int = Field(5, description="Réentraînement du modèle tous les N jours")
     allow_short: bool = Field(False, description="Vente à découvert autorisée ?")
+
+
+class NewsItemOut(BaseModel):
+    """Une actualité du fil en direct (pop-ups + panneau latéral)."""
+
+    id: str = Field(..., description="Empreinte stable du titre — le frontend s'en sert pour ne jamais réafficher un pop-up")
+    title: str
+    link: str | None = Field(None, description="Lien vers l'article d'origine (RSS)")
+    symbols: list[str] = Field(
+        default_factory=list,
+        description="Tickers mentionnés ; [] = actualité générale du marché",
+    )
+    score: float = Field(..., description="Sentiment du titre, -1 (négatif) à +1 (positif)")
+    label: str = Field(..., description="'positif' | 'neutre' | 'négatif'")
+    source: str = Field(..., description="Moteur de sentiment : 'vader' | 'lexicon' | 'lexicon-fr'")
+    published: str | None = Field(None, description="Date de publication RSS (ISO 8601), si fournie")
+
+
+class NewsFeedOut(BaseModel):
+    """Fil d'actualités global : marché + actifs suivis, avec sentiment."""
+
+    updated_at: str = Field(..., description="Horodatage de l'agrégation (ISO 8601)")
+    items: list[NewsItemOut]

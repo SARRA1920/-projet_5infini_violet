@@ -18,6 +18,7 @@ Organisation :
 - prediction.py : entraînement + inférence + cache en mémoire du modèle ;
 - sentiment.py : analyse de sentiment des titres de news ;
 - agent.py : agent de trading (policy + scoring) ;
+- news_feed.py : fil d'actualités en direct (marché + actifs, avec sentiment) ;
 - schemas.py : modèles Pydantic pour les réponses API ;
 - api.py : routes FastAPI sous /api/ia.
 
@@ -27,4 +28,7 @@ Conventions (cohérentes avec app.actuarial et app.services.analysis) :
 - 252 jours de bourse par an pour les annualisations.
 """
 
-__all__ = ["features", "prediction", "sentiment", "agent", "schemas", "api"]
+__all__ = [
+    "features", "prediction", "sentiment", "agent", "news_feed",
+    "schemas", "api",
+]

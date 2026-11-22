@@ -13,7 +13,10 @@ Routes :
 - GET  /api/ia/diagnostics/{symbol}         → diagnostic du modèle (IC, biais, calibration)
 - POST /api/ia/retrain/{symbol}?horizon=5   → réentraîner le modèle
 - GET  /api/ia/status                       → état du module (scikit-learn dispo ?)
+- GET  /api/ia/news/live?limit=20           → fil d'actualités en direct (pop-ups)
 """
+
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -27,6 +30,7 @@ from app.models.models import Asset, User
 from . import prediction as pred
 from . import sentiment as sent
 from . import agent as agent_mod
+from . import news_feed
 from .schemas import (
     AgentDecisionOut,
     AgentReasonOut,
@@ -39,6 +43,8 @@ from .schemas import (
     FeatureImportanceItemOut,
     FeatureImportanceOut,
     HeadlineSentimentOut,
+    NewsFeedOut,
+    NewsItemOut,
     PredictionOut,
     RetrainOut,
     SentimentOut,
@@ -267,6 +273,41 @@ def diagnostics(
                 mean_predicted=b.mean_predicted, mean_actual=b.mean_actual,
             )
             for b in diag.calibration
+        ],
+    )
+
+
+@router.get("/news/live", response_model=NewsFeedOut)
+def news_live(
+    limit: int = Query(20, ge=1, le=50, description="Nombre d'actualités renvoyées"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fil d'actualités **en direct** : marché + actifs suivis, avec sentiment.
+
+    Agrège le flux RSS « Top Stories » de Yahoo Finance (actualités générales
+    du marché) et les flux par actif récupérés **par rotation** (au plus 3
+    sources par appel, caches 20 min) — la politesse réseau est garantie même
+    avec de nombreux utilisateurs connectés. Chaque titre reçoit un id stable,
+    les tickers mentionnés ([] = news marché) et un score de sentiment calculé
+    par le moteur multilingue de `sentiment.py`. Le fil agrégé est partagé en
+    cache 90 s : rafraîchir la page ne re-fetch jamais les sources RSS.
+    """
+    items = news_feed.live_news(db, limit=limit)
+    return NewsFeedOut(
+        updated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+        items=[
+            NewsItemOut(
+                id=i.id,
+                title=i.title,
+                link=i.link,
+                symbols=i.symbols,
+                score=i.score,
+                label=i.label,
+                source=i.source,
+                published=i.published.isoformat() if i.published else None,
+            )
+            for i in items
         ],
     )
 

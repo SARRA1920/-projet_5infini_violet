@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import GuideTour from "./GuideTour.jsx";
+import NewsFeed from "./NewsFeed.jsx";
 
 const NAV = [
   {
@@ -261,6 +262,8 @@ export default function AppShell() {
         </div>
         {user.role !== "admin" && user.level && !user.guide_seen_at && <GuideTour />}
       </div>
+      {/* Fil d'actualités en direct : pop-ups + panneau, visible sur toutes les pages. */}
+      <NewsFeed />
     </div>
   );
 }
