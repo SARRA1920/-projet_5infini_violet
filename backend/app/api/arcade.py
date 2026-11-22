@@ -25,6 +25,25 @@ def _names(db: Session) -> dict[str, str]:
     return {a.symbol: a.name for a in db.scalars(select(Asset)).all()}
 
 
+@router.get("/active")
+def get_active_runs(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Renvoie les tentatives en cours de l'utilisateur (une par type, s'il y en a une).
+
+    Permet au front de proposer de reprendre une partie déjà démarrée plutôt que de
+    se contenter de bloquer un nouveau démarrage avec une erreur 409.
+    """
+    event_run = db.scalars(
+        select(EventRun).where(EventRun.user_id == user.id, EventRun.status == "active")
+    ).first()
+    strategy_run = db.scalars(
+        select(StrategyRun).where(StrategyRun.user_id == user.id, StrategyRun.status == "active")
+    ).first()
+    return {
+        "event_run_id": event_run.id if event_run is not None else None,
+        "strategy_run_id": strategy_run.id if strategy_run is not None else None,
+    }
+
+
 # ---------- Type 1 : vraie crise tirée au hasard ----------
 class EventTradeRequest(BaseModel):
     symbol: str

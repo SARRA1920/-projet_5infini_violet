@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api.js";
 import "./arcade.css";
@@ -46,8 +46,19 @@ export default function ArcadePage() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [active, setActive] = useState({ event_run_id: null, strategy_run_id: null });
+
+  useEffect(() => {
+    api("/salles-de-jeu/active")
+      .then(setActive)
+      .catch(() => {});
+  }, []);
 
   async function playEvent() {
+    if (active.event_run_id) {
+      navigate(`/salles-de-jeu/evenement/${active.event_run_id}`);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -62,7 +73,19 @@ export default function ArcadePage() {
   function onPlay(type) {
     if (!type.ready) return;
     if (type.key === "event") playEvent();
-    if (type.key === "strategy") navigate("/salles-de-jeu/strategie");
+    if (type.key === "strategy") {
+      if (active.strategy_run_id) {
+        navigate(`/salles-de-jeu/strategie/${active.strategy_run_id}`);
+      } else {
+        navigate("/salles-de-jeu/strategie");
+      }
+    }
+  }
+
+  function ctaFor(type) {
+    if (type.key === "event" && active.event_run_id) return "Reprendre";
+    if (type.key === "strategy" && active.strategy_run_id) return "Reprendre";
+    return type.cta;
   }
 
   return (
@@ -91,7 +114,7 @@ export default function ArcadePage() {
             <div className="ag-card-foot">
               {!t.ready && <span className="ag-soon">en préparation</span>}
               <button className="ag-btn" disabled={!t.ready || busy} onClick={() => onPlay(t)}>
-                {t.ready ? "▶" : "—"} {t.cta}
+                {t.ready ? "▶" : "—"} {ctaFor(t)}
               </button>
             </div>
           </article>
