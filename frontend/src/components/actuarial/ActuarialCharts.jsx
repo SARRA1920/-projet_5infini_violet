@@ -23,7 +23,7 @@ import { ASSET_CLASS_COLORS, ASSET_CLASS_LABELS, DATA_SOURCE_LABELS, fmtAmount, 
 const AXIS = { fill: "#93a0b5", fontSize: 12 };
 const GRID = "rgba(255, 255, 255, 0.06)";
 const TOOLTIP = {
-  contentStyle: { background: "#121a2b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10 },
+  contentStyle: { background: "#151a24", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10 },
   labelStyle: { color: "#e8eef8" },
   itemStyle: { color: "#e8eef8" },
 };
@@ -40,15 +40,15 @@ export function ValueCurveChart({ points }) {
       <AreaChart data={points} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
         <defs>
           <linearGradient id="act-value" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8eb7ff" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="#8eb7ff" stopOpacity={0} />
+            <stop offset="0%" stopColor="#5eead4" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#5eead4" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="date" tick={AXIS} minTickGap={40} />
         <YAxis tick={AXIS} domain={["auto", "auto"]} width={72} tickFormatter={(v) => fmtAmount(v).split(",")[0]} />
         <Tooltip {...TOOLTIP} formatter={(v) => [fmtAmount(v), "Valeur"]} />
-        <Area type="monotone" dataKey="value" stroke="#8eb7ff" strokeWidth={2} fill="url(#act-value)" />
+        <Area type="monotone" dataKey="value" stroke="#5eead4" strokeWidth={2} fill="url(#act-value)" />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -74,7 +74,7 @@ export function BinsHistogram({ bins, format = fmtPct, axisFormat, unit = "Obser
         />
         <Bar dataKey="count">
           {data.map((bin) => (
-            <Cell key={bin.from} fill={colorOf ? colorOf(bin) : "#8eb7ff"} />
+            <Cell key={bin.from} fill={colorOf ? colorOf(bin) : "#5eead4"} />
           ))}
         </Bar>
       </BarChart>
@@ -99,14 +99,14 @@ export function ReturnHistogram({ returns, var1d, bins = 30 }) {
 // Rouge au-delà de la VaR (pertes), vert pour les gains, bleu entre les deux.
 export function lossColor(bin, varLevel) {
   if (varLevel != null && bin.to <= -varLevel) return LOSS;
-  return bin.from >= 0 ? GAIN : "#8eb7ff";
+  return bin.from >= 0 ? GAIN : "#5eead4";
 }
 
 // Carte de chaleur des corrélations : bleu = corrélation positive, rouge = négative.
 export function CorrelationHeatmap({ symbols, matrix }) {
   const color = (value) => {
     const alpha = Math.min(1, Math.abs(value)) * 0.85 + 0.05;
-    return value >= 0 ? `rgba(142, 183, 255, ${alpha})` : `rgba(255, 93, 115, ${alpha})`;
+    return value >= 0 ? `rgba(94, 234, 212, ${alpha})` : `rgba(255, 93, 115, ${alpha})`;
   };
   return (
     <div className="table-scroll">
@@ -162,8 +162,8 @@ export function FanChart({ fan, paths = [], format = fmtAmount, xLabel = "année
             return [format(value), name];
           }}
         />
-        <Area dataKey="outer" name="5 % – 95 %" stroke="none" fill="#8eb7ff" fillOpacity={0.15} isAnimationActive={false} />
-        <Area dataKey="inner" name="25 % – 75 %" stroke="none" fill="#8eb7ff" fillOpacity={0.3} isAnimationActive={false} />
+        <Area dataKey="outer" name="5 % – 95 %" stroke="none" fill="#5eead4" fillOpacity={0.15} isAnimationActive={false} />
+        <Area dataKey="inner" name="25 % – 75 %" stroke="none" fill="#5eead4" fillOpacity={0.3} isAnimationActive={false} />
         {paths.map((_, i) => (
           <Line key={i} dataKey={`path${i}`} stroke="rgba(232, 238, 248, 0.25)" dot={false} strokeWidth={1}
                 isAnimationActive={false} legendType="none" name={`Trajectoire ${i + 1}`} tooltipType="none" />
@@ -188,7 +188,7 @@ export function FrontierChart({ frontier, points }) {
                label={{ value: "Volatilité annualisée", position: "insideBottom", offset: -4, fill: "#6f7d92", fontSize: 11 }} />
         <YAxis type="number" dataKey="y" name="Rendement" tick={AXIS} tickFormatter={fmtPct} width={64} domain={["auto", "auto"]} />
         <Tooltip {...TOOLTIP} formatter={(value, name) => [fmtPct(value), name]} />
-        <Scatter name="Frontière efficiente" data={line} line={{ stroke: "#8eb7ff", strokeWidth: 2 }} fill="#8eb7ff"
+        <Scatter name="Frontière efficiente" data={line} line={{ stroke: "#5eead4", strokeWidth: 2 }} fill="#5eead4"
                  shape={() => null} isAnimationActive={false} />
         {points.map((p) => (
           <Scatter key={p.name} name={p.name} data={[{ x: p.volatility, y: p.expected_return }]} fill={p.color}
@@ -229,7 +229,7 @@ export function SimpleLineChart({ data, x, y, xFormat, yFormat, name, marker }) 
         <YAxis tick={AXIS} width={64} domain={["auto", "auto"]} tickFormatter={yFormat} />
         <Tooltip {...TOOLTIP} labelFormatter={xFormat} formatter={(v) => [yFormat(v), name]} />
         {marker != null && <ReferenceLine x={marker} stroke="#f5b94a" strokeDasharray="4 4" />}
-        <Line dataKey={y} name={name} stroke="#8eb7ff" dot={false} strokeWidth={2} isAnimationActive={false} />
+        <Line dataKey={y} name={name} stroke="#5eead4" dot={false} strokeWidth={2} isAnimationActive={false} />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -244,7 +244,7 @@ export function CashFlowChart({ flows }) {
         <XAxis dataKey="date" tick={AXIS} minTickGap={30} />
         <YAxis tick={AXIS} width={64} tickFormatter={(v) => fmtAmount(v).split(",")[0]} />
         <Tooltip {...TOOLTIP} formatter={(v, name) => [fmtAmount(v), name]} />
-        <Bar dataKey="coupon" stackId="cf" name="Coupon" fill="#8eb7ff" isAnimationActive={false} />
+        <Bar dataKey="coupon" stackId="cf" name="Coupon" fill="#5eead4" isAnimationActive={false} />
         <Bar dataKey="principal" stackId="cf" name="Remboursement" fill="#3dd68c" isAnimationActive={false} />
         <Line dataKey="pv" name="Valeur actuelle" stroke="#f5b94a" dot={false} strokeWidth={2} isAnimationActive={false} />
         <Legend wrapperStyle={{ color: "#93a0b5", fontSize: 12 }} />
@@ -265,7 +265,7 @@ export function ExposureBars({ rows }) {
           <div className="act-bar-track">
             <div
               className="act-bar-fill"
-              style={{ width: `${Math.max(0, row.weight) * 100}%`, background: ASSET_CLASS_COLORS[row.asset_class] || "#8eb7ff" }}
+              style={{ width: `${Math.max(0, row.weight) * 100}%`, background: ASSET_CLASS_COLORS[row.asset_class] || "#5eead4" }}
             />
           </div>
           <em>{fmtAmount(row.value)}</em>
@@ -284,7 +284,7 @@ export function RiskShareChart({ rows }) {
         <YAxis type="category" dataKey="symbol" tick={AXIS} width={72} />
         <Tooltip {...TOOLTIP} formatter={(v, name) => [fmtPct(v), name === "risk_share" ? "Part du risque" : "Poids"]} />
         <Bar dataKey="weight" fill="#3b4a66" name="weight" />
-        <Bar dataKey="risk_share" fill="#8eb7ff" name="risk_share" />
+        <Bar dataKey="risk_share" fill="#5eead4" name="risk_share" />
       </BarChart>
     </ResponsiveContainer>
   );

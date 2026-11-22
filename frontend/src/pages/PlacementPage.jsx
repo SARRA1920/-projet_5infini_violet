@@ -7,7 +7,7 @@ import "./formation.css";
 const LEVELS = {
   debutant: {
     label: "Débutant",
-    color: "#38bdf8",
+    color: "#2dd4bf",
     text: "Tu découvres les marchés. Les premières salles de crise te guideront pas à pas, avec des situations accessibles.",
   },
   intermediaire: {
@@ -256,7 +256,7 @@ export default function PlacementPage() {
           <div className="pl-result pl-result-skip">
             <span
               className="pl-pill"
-              style={{ background: LEVELS[result.level].color, color: "#0b1220" }}
+              style={{ background: LEVELS[result.level].color, color: "#0a0d13" }}
             >
               Niveau {LEVELS[result.level].label}
             </span>
@@ -276,7 +276,7 @@ export default function PlacementPage() {
           <div className="pl-result">
             <Gauge score={result.score} max={result.max_score} color={LEVELS[result.level].color} />
             <div>
-              <span className="pl-pill" style={{ background: LEVELS[result.level].color, color: "#0b1220" }}>
+              <span className="pl-pill" style={{ background: LEVELS[result.level].color, color: "#0a0d13" }}>
                 Niveau {LEVELS[result.level].label}
               </span>
               <h1>

@@ -159,7 +159,7 @@ export default function PredictionPage() {
                   contentStyle={{
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
-                    background: "#121a2b",
+                    background: "#151a24",
                     color: "#e8eef8",
                     fontSize: 13,
                   }}
@@ -170,7 +170,7 @@ export default function PredictionPage() {
                   type="monotone"
                   dataKey="high"
                   stroke="none"
-                  fill="rgba(47,124,246,0.15)"
+                  fill="rgba(34, 211, 238,0.15)"
                   name="Borne haute"
                 />
                 <Area
@@ -183,9 +183,9 @@ export default function PredictionPage() {
                 <Line
                   type="monotone"
                   dataKey="close"
-                  stroke="#2f7cf6"
+                  stroke="#22d3ee"
                   strokeWidth={2.5}
-                  dot={{ r: 5, fill: "#2f7cf6" }}
+                  dot={{ r: 5, fill: "#22d3ee" }}
                   name="Cours / Projection"
                 />
               </ComposedChart>
@@ -228,7 +228,7 @@ export default function PredictionPage() {
                     contentStyle={{
                       borderRadius: 10,
                       border: "1px solid rgba(255,255,255,0.12)",
-                      background: "#121a2b",
+                      background: "#151a24",
                       color: "#e8eef8",
                       fontSize: 13,
                     }}
@@ -236,7 +236,7 @@ export default function PredictionPage() {
                   />
                   <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                     {featureImp.features.map((entry, i) => (
-                      <Cell key={i} fill={i === 0 ? "#2f7cf6" : "#3b82f6"} />
+                      <Cell key={i} fill={i === 0 ? "#22d3ee" : "#22d3ee"} />
                     ))}
                   </Bar>
                 </BarChart>

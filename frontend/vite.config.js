@@ -22,6 +22,7 @@ export default defineConfig({
       "^/stress/": { target: backend, changeOrigin: true },
       // Seulement les routes d'API : /formation/niveau et /formation/salle/... sont des pages React.
       "^/formation/(placement|rooms|runs|guide|progress|leaderboard)": { target: backend, changeOrigin: true },
+      "^/salles-de-jeu/(events|event-runs|strategies|strategy-runs|active)": { target: backend, changeOrigin: true },
     },
   },
 });

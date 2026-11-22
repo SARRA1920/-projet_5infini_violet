@@ -86,7 +86,7 @@ export const filters = [
 
 export const allocation = [
   { label: "Actions tunisiennes", value: 36, color: "#3dd68c" },
-  { label: "Actions internationales", value: 27, color: "#3b82f6" },
+  { label: "Actions internationales", value: 27, color: "#22d3ee" },
   { label: "Devises", value: 18, color: "#a78bfa" },
   { label: "Matières premières", value: 11, color: "#fb923c" },
   { label: "Liquidités", value: 8, color: "#64748b" },

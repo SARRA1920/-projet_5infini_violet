@@ -34,7 +34,7 @@ body {
   padding: 0.7rem 1rem;
   border: 0;
   border-radius: 8px;
-  background: #1456c8;
+  background: #0e7490;
   color: #fff;
   font: inherit;
   cursor: pointer;
@@ -74,7 +74,7 @@ body {
   padding: 2.5rem 3rem 1.75rem;
   color: #e8eef8;
   background:
-    radial-gradient(circle at 20% 10%, rgba(61, 139, 253, 0.18), transparent 32%),
+    radial-gradient(circle at 20% 10%, rgba(34, 211, 238, 0.18), transparent 32%),
     linear-gradient(160deg, #07111f 0%, #0c1b33 55%, #10284a 100%);
 }
 
@@ -110,7 +110,7 @@ body {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: #2f7cf6;
+  background: #22d3ee;
   color: #fff;
 }
 
@@ -124,9 +124,9 @@ body {
   display: inline-block;
   margin: 0 0 1rem;
   padding: 0.35rem 0.7rem;
-  border: 1px solid rgba(125, 176, 255, 0.35);
+  border: 1px solid rgba(94, 234, 212, 0.35);
   border-radius: 999px;
-  color: #8eb7ff;
+  color: #5eead4;
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -140,7 +140,7 @@ body {
 }
 
 .hero-copy h1 span {
-  color: #4c94ff;
+  color: #22d3ee;
 }
 
 .hero-lead {
@@ -157,7 +157,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   padding: 1rem 1rem 0.85rem;
-  background: rgba(8, 18, 36, 0.72);
+  background: rgba(10, 13, 19, 0.72);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
 }
 
@@ -221,7 +221,7 @@ body {
 
 .auth-kicker {
   margin: 0 0 0.45rem;
-  color: #2f7cf6;
+  color: #22d3ee;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -274,7 +274,7 @@ body {
 .text-link {
   border: 0;
   background: transparent;
-  color: #2f7cf6;
+  color: #22d3ee;
   font: inherit;
   cursor: pointer;
 }
@@ -314,7 +314,7 @@ body {
 
 .auth-info {
   margin: 0.9rem 0 0;
-  color: #2f7cf6;
+  color: #22d3ee;
 }
 
 .auth-submit {
@@ -323,7 +323,7 @@ body {
   padding: 0.9rem 1rem;
   border: 0;
   border-radius: 12px;
-  background: #2f7cf6;
+  background: #22d3ee;
   color: #fff;
   font: inherit;
   font-weight: 700;
@@ -343,7 +343,7 @@ body {
 
 .auth-switch a,
 .text-link {
-  color: #2f7cf6;
+  color: #22d3ee;
   font-weight: 700;
   text-decoration: none;
 }

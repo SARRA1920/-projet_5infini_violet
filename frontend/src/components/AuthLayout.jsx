@@ -36,8 +36,8 @@ export default function AuthLayout({ children }) {
           <svg className="chart" viewBox="0 0 560 210" role="img" aria-label="Graphique illustratif EUR/USD">
             <defs>
               <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3d8bfd" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#3d8bfd" stopOpacity="0" />
+                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
               </linearGradient>
             </defs>
             {[40, 80, 120, 160].map((y) => (
@@ -82,7 +82,7 @@ export default function AuthLayout({ children }) {
             <path
               d="M24 150 C 90 132, 140 118, 190 124 S 280 86, 340 92 S 450 48, 536 58"
               fill="none"
-              stroke="#5aa6ff"
+              stroke="#22d3ee"
               strokeWidth="3"
             />
           </svg>

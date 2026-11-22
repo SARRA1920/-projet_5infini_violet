@@ -5,6 +5,7 @@ from app.actuarial.api import router as actuarial_router
 from app.api.admin import router as admin_router
 from app.api.analysis import router as analysis_router
 from app.api.auth import router as auth_router
+from app.api.arcade import router as arcade_router
 from app.api.formation import router as formation_router
 from app.api.quotes import router as quotes_router
 from app.api.stress import router as stress_router
@@ -40,6 +41,7 @@ app.include_router(stress_router)
 app.include_router(trading_router)
 app.include_router(admin_router)
 app.include_router(formation_router)
+app.include_router(arcade_router)
 app.include_router(actuarial_router)
 app.include_router(ia_router)
 
