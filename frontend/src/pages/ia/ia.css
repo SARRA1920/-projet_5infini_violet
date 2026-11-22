@@ -1,20 +1,20 @@
 /* Module IA — thème sombre, cohérent avec shell.css et actuariat.css.
-   Palette : surfaces #121a2b, texte #e8eef8, muted #93a0b5,
-   bleu #2f7cf6 / #1d4ed8, vert #3dd68c, rouge #ff5d73, violet #5b4dff. */
+   Palette : surfaces #151a24, texte #e8eef8, muted #93a0b5,
+   bleu #22d3ee / #0e7490, vert #3dd68c, rouge #ff5d73, violet #5b4dff. */
 
 .ia-page {
   /* Variables locales au module IA : évite les var(--muted, ...) qui tombent
      sur des fallbacks inadaptés au thème sombre. */
-  --ia-surface: #121a2b;
-  --ia-surface-2: #0f1828;
-  --ia-surface-3: #1a2540;
+  --ia-surface: #151a24;
+  --ia-surface-2: #0d1119;
+  --ia-surface-3: #1c2330;
   --ia-text: #e8eef8;
   --ia-muted: #93a0b5;
   --ia-muted-2: #b7c3d4;
   --ia-border: rgba(255, 255, 255, 0.08);
   --ia-border-strong: rgba(255, 255, 255, 0.14);
-  --ia-blue: #2f7cf6;
-  --ia-blue-deep: #1d4ed8;
+  --ia-accent: #22d3ee;
+  --ia-accent-deep: #0e7490;
   --ia-up: #3dd68c;
   --ia-down: #ff5d73;
   --ia-purple: #5b4dff;
@@ -46,8 +46,8 @@
 }
 .ia-page .ia-tabs a.active {
   color: #fff;
-  background: var(--ia-blue-deep);
-  border-bottom-color: var(--ia-blue);
+  background: var(--ia-accent-deep);
+  border-bottom-color: var(--ia-accent);
   font-weight: 600;
 }
 
@@ -145,7 +145,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--ia-blue);
+  background: var(--ia-accent);
 }
 .ia-card:nth-child(2)::before {
   background: var(--ia-amber);
@@ -164,8 +164,8 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(47, 124, 246, 0.14);
-  color: var(--ia-blue);
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--ia-accent);
 }
 .ia-card:nth-child(2) .ia-card-icon {
   background: rgba(245, 185, 74, 0.14);
@@ -196,7 +196,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--ia-blue);
+  color: var(--ia-accent);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -206,7 +206,7 @@
   padding: 1.1rem 1.4rem;
   background: var(--ia-surface-2);
   border: 1px solid var(--ia-border);
-  border-left: 3px solid var(--ia-blue);
+  border-left: 3px solid var(--ia-accent);
   border-radius: 10px;
 }
 .ia-note h3 {
@@ -226,7 +226,7 @@
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
   font-size: 0.82rem;
-  color: var(--ia-blue);
+  color: var(--ia-accent);
 }
 
 /* ---- Formulaires et panneaux ---- */
@@ -282,7 +282,7 @@
 .ia-form select:focus,
 .ia-form textarea:focus {
   outline: none;
-  border-color: var(--ia-blue);
+  border-color: var(--ia-accent);
 }
 .ia-form input::placeholder,
 .ia-form textarea::placeholder {
@@ -295,7 +295,7 @@
 }
 .ia-form button {
   padding: 0.6rem 1.4rem;
-  background: var(--ia-blue);
+  background: var(--ia-accent);
   color: #fff;
   border: 0;
   border-radius: 10px;
@@ -305,7 +305,7 @@
   transition: background 0.15s, transform 0.1s;
 }
 .ia-form button:hover:not(:disabled) {
-  background: #1f6fe0;
+  background: #0e7490;
 }
 .ia-form button:active:not(:disabled) {
   transform: scale(0.97);
@@ -425,8 +425,8 @@
   left: 0;
   top: 0;
   height: 100%;
-  background: rgba(47, 124, 246, 0.22);
-  border-right: 2px solid var(--ia-blue);
+  background: rgba(34, 211, 238, 0.22);
+  border-right: 2px solid var(--ia-accent);
 }
 .sentiment-source {
   font-size: 0.8rem;
@@ -532,7 +532,7 @@
 }
 .reason-signal {
   font-weight: 700;
-  color: var(--ia-blue);
+  color: var(--ia-accent);
   text-transform: capitalize;
 }
 .reason-detail {
@@ -553,7 +553,7 @@
 .reason-total {
   margin-top: 0.85rem;
   padding: 0.75rem 0.95rem;
-  background: rgba(47, 124, 246, 0.08);
+  background: rgba(34, 211, 238, 0.08);
   border: 1px solid var(--ia-border);
   border-radius: 8px;
   font-size: 0.9rem;
@@ -622,7 +622,7 @@
 .conf-gauge-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #2f7cf6, #38bdf8);
+  background: linear-gradient(90deg, #22d3ee, #2dd4bf);
   transition: width 0.4s ease;
 }
 
@@ -649,7 +649,7 @@
 .ia-form .ia-checkbox input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
-  accent-color: #2f7cf6;
+  accent-color: #22d3ee;
 }
 
 .ia-table-wrap {

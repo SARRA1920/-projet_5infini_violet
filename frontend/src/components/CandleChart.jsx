@@ -73,7 +73,7 @@ export default function CandleChart({ data }) {
     const long = price.addLineSeries({ color: "#a78bfa", lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
     long.setData(linePoints(data.dates, data.sma_long));
 
-    const strength = rsiChart.addLineSeries({ color: "#5aa6ff", lineWidth: 2, priceLineVisible: false });
+    const strength = rsiChart.addLineSeries({ color: "#22d3ee", lineWidth: 2, priceLineVisible: false });
     strength.setData(linePoints(data.dates, data.rsi));
     strength.createPriceLine({ price: 70, color: "#64748b", lineStyle: 2, axisLabelVisible: true, title: "" });
     strength.createPriceLine({ price: 30, color: "#64748b", lineStyle: 2, axisLabelVisible: true, title: "" });

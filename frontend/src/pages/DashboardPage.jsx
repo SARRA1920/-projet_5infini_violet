@@ -25,7 +25,7 @@ const RANGES = { "1J": 2, "1S": 6, "1M": 22, "1A": Infinity };
 
 const GROUPS = [
   { id: "actions", label: "Actions", color: "#3dd68c" },
-  { id: "obligations", label: "Obligations", color: "#3b82f6" },
+  { id: "obligations", label: "Obligations", color: "#22d3ee" },
   { id: "devises", label: "Devises", color: "#a78bfa" },
   { id: "matieres", label: "Matières premières", color: "#fb923c" },
   { id: "cash", label: "Liquidités", color: "#64748b" },
@@ -180,12 +180,12 @@ export default function DashboardPage() {
           <svg className="perf-chart" viewBox="0 0 640 180" role="img" aria-label="Courbe de performance">
             <defs>
               <linearGradient id="perfFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path d={chart.area} fill="url(#perfFill)" />
-            <path d={chart.line} fill="none" stroke="#5aa6ff" strokeWidth="3" />
+            <path d={chart.line} fill="none" stroke="#22d3ee" strokeWidth="3" />
           </svg>
         </article>
 

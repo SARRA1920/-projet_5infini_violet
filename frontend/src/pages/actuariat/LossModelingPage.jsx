@@ -402,7 +402,7 @@ export default function LossModelingPage() {
           <div className="act-grid">
             <Panel title="Distribution de la perte annuelle" subtitle="En rouge : au-delà de la VaR 99,5 %." source="simulated">
               <BinsHistogram bins={result.histogram} format={fmtAmount} axisFormat={fmtCompact} unit="Années"
-                             colorOf={(bin) => (bin.to > capital.var ? "#ff5d73" : "#8eb7ff")} />
+                             colorOf={(bin) => (bin.to > capital.var ? "#ff5d73" : "#5eead4")} />
             </Panel>
             <Panel title="Densité de la sévérité" subtitle={`Moyenne ${fmtAmount(result.severity.mean)} · quantile 99 % ${fmtAmount(result.severity.quantile_99)}`}>
               <SimpleLineChart data={result.severity_curve} x="x" y="density" name="Densité" xFormat={fmtAmount}

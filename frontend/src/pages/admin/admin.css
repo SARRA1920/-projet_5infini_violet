@@ -24,13 +24,13 @@
 
 .admin-nav a.active,
 .admin-nav a:hover {
-  background: #1d4ed8;
+  background: #0e7490;
   color: #fff;
 }
 
 .admin-note {
   margin: 0 0 0.8rem;
-  color: #8eb7ff;
+  color: #5eead4;
   font-size: 0.85rem;
 }
 
@@ -58,7 +58,7 @@
   border: 0;
   border-radius: 8px;
   padding: 0.4rem 0.65rem;
-  background: #1d4ed8;
+  background: #0e7490;
   color: #fff;
   cursor: pointer;
   font: inherit;
@@ -102,7 +102,7 @@
   display: block;
   height: 100%;
   border-radius: 99px;
-  background: #3b82f6;
+  background: #22d3ee;
 }
 
 .split {

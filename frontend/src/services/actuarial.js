@@ -32,7 +32,7 @@ export const ASSET_CLASS_LABELS = {
 };
 
 export const ASSET_CLASS_COLORS = {
-  stock: "#8eb7ff",
+  stock: "#5eead4",
   bond: "#3dd68c",
   commodity: "#f5b94a",
   forex: "#c084fc",

@@ -20,7 +20,7 @@
 }
 
 .act-tabs a.active {
-  background: #1d4ed8;
+  background: #0e7490;
   color: #fff;
 }
 
@@ -52,7 +52,7 @@
   padding: 0.55rem 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #e8eef8;
   font: inherit;
 }
@@ -91,8 +91,8 @@
 }
 
 .act-badge-simulated {
-  background: rgba(142, 183, 255, 0.16);
-  color: #8eb7ff;
+  background: rgba(94, 234, 212, 0.16);
+  color: #5eead4;
 }
 
 .act-warning {
@@ -215,7 +215,7 @@
   padding: 0.55rem 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #e8eef8;
   font: inherit;
   resize: vertical;
@@ -242,8 +242,8 @@
 
 .act-segmented button.active,
 .act-chips button.active {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
+  border-color: #0e7490;
+  background: #0e7490;
   color: #fff;
 }
 
@@ -302,7 +302,7 @@
   padding: 0.5rem 0.65rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #e8eef8;
   font: inherit;
 }
@@ -327,7 +327,7 @@
   align-self: flex-start;
   border: 0;
   padding: 0.2rem 0;
-  color: #8eb7ff;
+  color: #5eead4;
   font-size: 0.85rem;
 }
 
@@ -338,7 +338,7 @@
 
 .act-secondary-btn:hover,
 .act-icon-btn:hover:not(:disabled) {
-  border-color: #8eb7ff;
+  border-color: #5eead4;
   color: #fff;
 }
 
@@ -347,7 +347,7 @@
 }
 
 .act-info {
-  color: #8eb7ff;
+  color: #5eead4;
 }
 
 .act-kpis + .act-kpis {
@@ -362,7 +362,7 @@
 }
 
 .act-row-selected td {
-  background: rgba(29, 78, 216, 0.16);
+  background: rgba(14, 116, 144, 0.16);
 }
 
 .act-clickable tbody tr {
@@ -391,7 +391,7 @@
   min-width: 42px;
   padding: 0.45rem 0.3rem;
   border-radius: 6px;
-  color: #0b1220;
+  color: #0a0d13;
   font-weight: 700;
   text-align: center;
 }
@@ -415,7 +415,7 @@
   margin-right: 0.6rem;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #f5b94a;
 }
 
@@ -440,7 +440,7 @@
 
 .act-calibrate summary {
   cursor: pointer;
-  color: #8eb7ff;
+  color: #5eead4;
   font-size: 0.86rem;
 }
 
@@ -505,7 +505,7 @@
   padding: 0.45rem 0.6rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #e8eef8;
   font: inherit;
 }
@@ -579,7 +579,7 @@
 
 .act-assumptions summary {
   cursor: pointer;
-  color: #8eb7ff;
+  color: #5eead4;
 }
 
 .act-assumptions pre {
@@ -587,7 +587,7 @@
   overflow: auto;
   padding: 0.5rem;
   border-radius: 8px;
-  background: #0b1220;
+  background: #0a0d13;
   color: #93a0b5;
   font-size: 0.75rem;
 }

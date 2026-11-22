@@ -253,7 +253,7 @@ export default function BacktestPage() {
                   contentStyle={{
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
-                    background: "#121a2b",
+                    background: "#151a24",
                     color: "#e8eef8",
                     fontSize: 13,
                   }}
@@ -274,7 +274,7 @@ export default function BacktestPage() {
                   type="monotone"
                   dataKey="buyHold"
                   name="Buy &amp; hold"
-                  stroke="#7c9cf5"
+                  stroke="#5eead4"
                   strokeWidth={2}
                   strokeDasharray="5 4"
                   dot={false}
@@ -305,7 +305,7 @@ export default function BacktestPage() {
                   contentStyle={{
                     borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.12)",
-                    background: "#121a2b",
+                    background: "#151a24",
                     color: "#e8eef8",
                     fontSize: 13,
                   }}

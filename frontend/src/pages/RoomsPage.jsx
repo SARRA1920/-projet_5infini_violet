@@ -4,7 +4,7 @@ import { api } from "../services/api.js";
 import "./rooms.css";
 
 const LEVEL = {
-  debutant: { label: "Débutant", color: "#38bdf8" },
+  debutant: { label: "Débutant", color: "#2dd4bf" },
   intermediaire: { label: "Intermédiaire", color: "#a78bfa" },
   pro: { label: "Pro", color: "#f59e0b" },
 };
