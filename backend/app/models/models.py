@@ -271,6 +271,54 @@ class CrisisRun(Base):
     max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+# ---------- Salles de stratégie ----------
+class StrategyRun(Base):
+    """Une tentative d'un joueur dans une salle de stratégie (rejeu de vraies données BVMT)."""
+
+    __tablename__ = "strategy_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    strategy_key: Mapped[str] = mapped_column(String(30))
+    symbol: Mapped[str] = mapped_column(String(20))
+    window_start: Mapped[date_type] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active / finished
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    day_index: Mapped[int] = mapped_column(Integer, default=0)
+    cash: Mapped[float] = mapped_column(Float)
+    positions: Mapped[dict] = mapped_column(JSON, default=dict)          # {symbole: quantité}
+    position_opened_day: Mapped[dict] = mapped_column(JSON, default=dict)  # {symbole: jour d'achat}
+    equity_curve: Mapped[list] = mapped_column(JSON, default=list)
+    violations: Mapped[list] = mapped_column(JSON, default=list)         # [{day, message}]
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+
+# ---------- Salles de jeu : Type 1, vraie crise tirée au hasard ----------
+class EventRun(Base):
+    """Une tentative dans la salle Type 1 (rejeu d'une vraie crise BVMT, tirée au hasard)."""
+
+    __tablename__ = "event_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    event_key: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active / finished
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    day_index: Mapped[int] = mapped_column(Integer, default=0)
+    cash: Mapped[float] = mapped_column(Float)
+    positions: Mapped[dict] = mapped_column(JSON, default=dict)
+    equity_curve: Mapped[list] = mapped_column(JSON, default=list)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+
 
 # ---------- Sécurité : journal d'audit ----------
 class AuditLog(Base):

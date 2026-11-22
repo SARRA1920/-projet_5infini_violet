@@ -20,6 +20,10 @@ import {
 import AnalysisPage from "./pages/AnalysisPage.jsx";
 import ClassementPage from "./pages/ClassementPage.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
+import ArcadePage from "./pages/ArcadePage.jsx";
+import EventRunPage from "./pages/EventRunPage.jsx";
+import StrategyRoomsPage from "./pages/StrategyRoomsPage.jsx";
+import StrategyRunPage from "./pages/StrategyRunPage.jsx";
 import RoomsPage from "./pages/RoomsPage.jsx";
 import PlacementPage from "./pages/PlacementPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
@@ -118,6 +122,10 @@ export default function App() {
         </Route>
         <Route path="/formation" element={<RoomsPage />} />
         <Route path="/formation/salle/:runId" element={<RoomPage />} />
+        <Route path="/salles-de-jeu" element={<ArcadePage />} />
+        <Route path="/salles-de-jeu/strategie" element={<StrategyRoomsPage />} />
+        <Route path="/salles-de-jeu/strategie/:runId" element={<StrategyRunPage />} />
+        <Route path="/salles-de-jeu/evenement/:runId" element={<EventRunPage />} />
         <Route path="/classement" element={<ClassementPage />} />
         <Route path="/administration" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />

@@ -223,3 +223,4 @@ def get_progress(user: User = Depends(get_current_user), db: Session = Depends(g
 def get_leaderboard(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Classement général et par salle (tentatives terminées, tous les joueurs avec leur pseudo)."""
     return progression.leaderboard(db, user.id)
+

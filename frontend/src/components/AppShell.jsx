@@ -25,6 +25,7 @@ const NAV = [
     section: "Communauté",
     items: [
       { to: "/formation", label: "Formation", icon: "book" },
+      { to: "/salles-de-jeu", label: "Salles de jeu", icon: "dice" },
       { to: "/classement", label: "Classement", icon: "trophy" },
       { to: "/administration", label: "Administration", icon: "shield" },
     ],
@@ -116,6 +117,18 @@ function Icon({ name }) {
     return (
       <svg {...common}>
         <path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3M9 20h6M10 16h4" />
+      </svg>
+    );
+  }
+  if (name === "dice") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="18" height="18" rx="4" />
+        <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+        <circle cx="16" cy="8" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="8" cy="16" r="1" fill="currentColor" stroke="none" />
+        <circle cx="16" cy="16" r="1" fill="currentColor" stroke="none" />
       </svg>
     );
   }
