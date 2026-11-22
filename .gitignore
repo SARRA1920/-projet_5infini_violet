@@ -23,3 +23,4 @@ Thumbs.db
 
 # Donnees d'import brutes (BVMT, trop volumineuses pour git)
 backend/data_import/
+backend/app/data_import/
