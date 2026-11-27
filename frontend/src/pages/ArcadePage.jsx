@@ -25,11 +25,11 @@ const TYPES = [
   {
     key: "ai",
     code: "TYPE_03",
-    status: "SOON",
+    status: "LIVE",
     title: "Avec intelligence artificielle",
-    text: "Un modèle d'IA interviendra pendant la partie.",
-    cta: "À venir",
-    ready: false,
+    text: "Un choc brutal frappe une vraie action. Plus aucune vraie donnée ensuite : l'IA calcule la suite de la courbe (modèle stochastique calibré par l'IA) et tu joues sur cette suite.",
+    cta: "Jouer",
+    ready: true,
   },
   {
     key: "live",
@@ -46,7 +46,7 @@ export default function ArcadePage() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [active, setActive] = useState({ event_run_id: null, strategy_run_id: null });
+  const [active, setActive] = useState({ event_run_id: null, strategy_run_id: null, ai_run_id: null });
 
   useEffect(() => {
     api("/salles-de-jeu/active")
@@ -70,6 +70,22 @@ export default function ArcadePage() {
     }
   }
 
+  async function playAi() {
+    if (active.ai_run_id) {
+      navigate(`/salles-de-jeu/ia/${active.ai_run_id}`);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const state = await api("/salles-de-jeu/ai/start", { method: "POST" });
+      navigate(`/salles-de-jeu/ia/${state.run_id}`);
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
+
   function onPlay(type) {
     if (!type.ready) return;
     if (type.key === "event") playEvent();
@@ -80,11 +96,13 @@ export default function ArcadePage() {
         navigate("/salles-de-jeu/strategie");
       }
     }
+    if (type.key === "ai") playAi();
   }
 
   function ctaFor(type) {
     if (type.key === "event" && active.event_run_id) return "Reprendre";
     if (type.key === "strategy" && active.strategy_run_id) return "Reprendre";
+    if (type.key === "ai" && active.ai_run_id) return "Reprendre";
     return type.cta;
   }
 

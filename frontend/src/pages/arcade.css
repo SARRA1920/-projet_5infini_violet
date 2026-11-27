@@ -249,6 +249,33 @@
   flex-wrap: wrap;
 }
 
+.ag-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.ag-close {
+  background: transparent;
+  border: 1px solid var(--ag-border);
+  color: var(--ag-muted);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ag-close:hover:not(:disabled) {
+  border-color: var(--ag-down);
+  color: var(--ag-down);
+}
+
+.ag-close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .ag-bar h1 {
   font-size: 1.15rem;
   margin: 0.1rem 0;
@@ -432,6 +459,63 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Conseil de la stratégie : purement indicatif, jamais contraignant.
+   Carte à part entière (pas une simple ligne discrète) : eyebrow + action en
+   gros + explication en texte normal, avec une bordure gauche colorée selon
+   l'action pour qu'elle se repère d'un coup d'œil. */
+.ag-advice {
+  margin: 10px 10px 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--ag-border);
+  border-left: 4px solid var(--ag-muted);
+  background: var(--ag-panel-alt);
+}
+
+.ag-advice-label {
+  margin: 0 0 0.3rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ag-muted);
+}
+
+.ag-advice-action {
+  margin: 0 0 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ag-advice-icon {
+  font-size: 0.85rem;
+}
+
+.ag-advice-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ag-text);
+  line-height: 1.5;
+}
+
+.ag-advice.buy { border-left-color: var(--ag-up); }
+.ag-advice.buy .ag-advice-action { color: var(--ag-up); }
+
+.ag-advice.sell { border-left-color: var(--ag-down); }
+.ag-advice.sell .ag-advice-action { color: var(--ag-down); }
+
+.ag-advice.hold,
+.ag-advice.wait { border-left-color: #f5c242; }
+.ag-advice.hold .ag-advice-action,
+.ag-advice.wait .ag-advice-action { color: #f5c242; }
+
+.ag-advice.free { border-left-color: var(--ag-muted); }
+.ag-advice.free .ag-advice-action { color: var(--ag-muted); }
 
 .ag-side-tabs {
   display: grid;
@@ -637,4 +721,75 @@
   .ag-layout.no-watchlist {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Type 3 : salle IA (choc + suite calculée par l'IA) ---------- */
+.ag-ai-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 0.5rem 0.2rem 0;
+  font-size: 0.74rem;
+  color: var(--ag-muted);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.ag-ai-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ag-calib-toggle {
+  margin-top: 0.7rem;
+  background: none;
+  border: 1px solid var(--ag-border);
+  border-radius: 6px;
+  color: var(--ag-text);
+  font-size: 0.8rem;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ag-calib-toggle:hover {
+  border-color: var(--ag-muted);
+}
+
+.ag-calib-panel {
+  margin-top: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--ag-border);
+  border-radius: 6px;
+  background: var(--ag-panel-alt);
+}
+
+.ag-calib-panel ul {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ag-calib-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.82rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.ag-calib-panel .ag-muted {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
 }

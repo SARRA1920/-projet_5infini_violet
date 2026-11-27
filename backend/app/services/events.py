@@ -182,6 +182,14 @@ def _require_active(run) -> dict:
     return _load_event(run.event_key)
 
 
+def close_run(run, now: datetime) -> None:
+    """Ferme la tentative avant sa fin, sans la finaliser (pas de score calculé)."""
+    if run.status != "active":
+        raise RoomError("Cette tentative est déjà terminée")
+    run.status = "abandoned"
+    run.finished_at = now
+
+
 def trade(run, symbol: str, side: str, quantity: float, now: datetime) -> None:
     event = _require_active(run)
     if symbol not in event["series"]:

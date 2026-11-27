@@ -22,6 +22,7 @@ import ClassementPage from "./pages/ClassementPage.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
 import ArcadePage from "./pages/ArcadePage.jsx";
 import EventRunPage from "./pages/EventRunPage.jsx";
+import AiRunPage from "./pages/AiRunPage.jsx";
 import StrategyRoomsPage from "./pages/StrategyRoomsPage.jsx";
 import StrategyRunPage from "./pages/StrategyRunPage.jsx";
 import RoomsPage from "./pages/RoomsPage.jsx";
@@ -126,6 +127,7 @@ export default function App() {
         <Route path="/salles-de-jeu/strategie" element={<StrategyRoomsPage />} />
         <Route path="/salles-de-jeu/strategie/:runId" element={<StrategyRunPage />} />
         <Route path="/salles-de-jeu/evenement/:runId" element={<EventRunPage />} />
+        <Route path="/salles-de-jeu/ia/:runId" element={<AiRunPage />} />
         <Route path="/classement" element={<ClassementPage />} />
         <Route path="/administration" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />

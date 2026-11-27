@@ -226,6 +226,81 @@ def _check_session_close(run, crisis: dict) -> list[str]:
     return msgs
 
 
+# ---------- Conseil au joueur (purement indicatif, basé sur la logique de la stratégie) ----------
+def _pct(entry_price: float, current_price: float) -> float:
+    return round((current_price / entry_price - 1) * 100, 2) if entry_price else 0.0
+
+
+def advice(run, crisis: dict, symbol: str) -> dict:
+    """Que dit la stratégie choisie, maintenant, pour CE joueur (ses propres achats/ventes) ?
+
+    Reprend exactement les mêmes règles que _check_buy/_check_sell/_check_session_close
+    (pas de nouvelle heuristique inventée), mais formulées en conseil proactif
+    ("tu devrais...") plutôt qu'en avertissement a posteriori, et personnalisées avec
+    les chiffres réels de SA position (prix d'achat, jours détenus, gain/perte).
+
+    action : "buy" | "sell" | "hold" (attendre avant de vendre) | "wait" (attendre avant
+    d'acheter) | "free" (aucune contrainte de la stratégie, à toi de juger).
+    """
+    rule = STRATEGIES[run.strategy_key]
+    held = (run.positions or {}).get(symbol, 0.0)
+    current_price = crisis["prices"][run.day_index]
+
+    if held <= 0:
+        if run.strategy_key == "trend":
+            trend = _trend_at(crisis, run.day_index)
+            if trend == "hausse":
+                return {"action": "buy", "message": "Tu n'as aucune position : la tendance est haussière, le trend trading recommande d'acheter maintenant."}
+            if trend == "baisse":
+                return {"action": "wait", "message": "Tu n'as aucune position : la tendance est baissière, attends un retournement haussier avant d'acheter."}
+            return {"action": "wait", "message": "Tu n'as aucune position : pas encore de tendance nette, patiente avant d'acheter."}
+        if run.strategy_key == "swing":
+            trend = _trend_at(crisis, run.day_index)
+            if trend == "baisse":
+                return {"action": "buy", "message": "Tu n'as aucune position : repli récent du cours, c'est souvent le bon moment pour acheter en swing trading (creux)."}
+            return {"action": "wait", "message": "Tu n'as aucune position : pas de creux net identifié, le swing trading attend un repli avant d'acheter."}
+        if run.strategy_key == "position":
+            return {"action": "buy", "message": "Tu n'as aucune position : le trading de position s'achète à tout moment, sans se soucier des creux ponctuels."}
+        if run.strategy_key in SESSION_STRATEGIES:
+            return {"action": "buy", "message": "Tu n'as aucune position : tu peux acheter à tout moment avec cette stratégie."}
+        return {"action": "wait", "message": "Tu n'as aucune position pour l'instant."}
+
+    opened_day = (run.position_opened_day or {}).get(symbol)
+    held_days = None
+    entry_price = None
+    gain = None
+    if opened_day is not None:
+        held_days = _group_of(run.strategy_key, run.day_index) - _group_of(run.strategy_key, opened_day)
+        entry_price = crisis["prices"][opened_day]
+        gain = _pct(entry_price, current_price)
+    gain_txt = f" (ton achat : {round(entry_price, 3)}, variation {gain:+.2f} %)" if entry_price is not None else ""
+
+    if run.strategy_key == "trend":
+        trend = _trend_at(crisis, run.day_index)
+        if trend == "baisse":
+            return {"action": "sell", "message": f"Tu détiens {held} action(s){gain_txt} : la tendance s'est retournée à la baisse, le trend trading recommande de vendre."}
+        return {"action": "hold", "message": f"Tu détiens {held} action(s){gain_txt} : la tendance reste haussière, garde la position."}
+
+    if run.strategy_key in SESSION_STRATEGIES:
+        label = "la journée" if run.strategy_key == "day_trading" else "la session de scalping"
+        return {"action": "sell", "message": f"Tu détiens {held} action(s){gain_txt} : clôture cette position avant la fin de {label}."}
+
+    if "min_hold_days" in rule and held_days is not None and held_days < rule["min_hold_days"]:
+        restant = rule["min_hold_days"] - held_days
+        return {"action": "hold", "message": f"Tu détiens {held} action(s) depuis {held_days} jour(s){gain_txt} : la stratégie « {rule['name']} » recommande d'attendre encore {restant} jour(s) avant de vendre."}
+
+    if "max_hold_days" in rule and held_days is not None and held_days >= rule["max_hold_days"]:
+        return {"action": "sell", "message": f"Tu détiens {held} action(s) depuis {held_days} jours{gain_txt}, au maximum recommandé ({rule['max_hold_days']} j) : c'est le moment de vendre."}
+
+    if run.strategy_key == "swing":
+        trend = _trend_at(crisis, run.day_index)
+        if trend == "baisse":
+            return {"action": "sell", "message": f"Tu détiens {held} action(s){gain_txt} : le cours commence à refluer, un sommet a peut-être été atteint, bon moment pour vendre."}
+        return {"action": "hold", "message": f"Tu détiens {held} action(s){gain_txt} : pas encore de signal de sommet, tu peux continuer à garder la position."}
+
+    return {"action": "free", "message": f"Tu détiens {held} action(s){gain_txt} : tu peux vendre quand tu veux, aucune contrainte supplémentaire pour cette stratégie."}
+
+
 # ---------- Cycle de vie d'une tentative ----------
 def start_run(db: Session, user_id: int, strategy_key: str, symbol: str, now: datetime):
     from app.models.models import StrategyRun
@@ -269,6 +344,14 @@ def _finish(run, crisis: dict, status: str, now: datetime) -> None:
 def _require_active(run):
     if run.status != "active":
         raise RoomError("Cette tentative est terminée")
+
+
+def close_run(run, now: datetime) -> None:
+    """Ferme la tentative avant sa fin, sans la finaliser (pas de score calculé)."""
+    if run.status != "active":
+        raise RoomError("Cette tentative est déjà terminée")
+    run.status = "abandoned"
+    run.finished_at = now
 
 
 def trade(db: Session, run, side: str, quantity: float, now: datetime) -> None:
@@ -369,6 +452,7 @@ def build_state(db: Session, run, name: str) -> dict:
         "history": history,
         "violations": run.violations or [],
         "is_last_step": idx >= len(crisis["prices"]) - 1,
+        "advice": advice(run, crisis, run.symbol) if run.status == "active" else None,
     }
     if run.status != "active":
         state["result"] = {
