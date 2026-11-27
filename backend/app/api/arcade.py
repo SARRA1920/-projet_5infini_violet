@@ -2,7 +2,8 @@
 
 Type 1 : vraie crise BVMT tirée au hasard à chaque partie (app.services.events).
 Type 2 : test de stratégie de trading sur une vraie action (app.services.strategy).
-Types 3 et 4 : à venir.
+Type 3 : choc + suite de la courbe calculée par l'IA (app.services.ai_room).
+Type 4 : à venir.
 """
 from datetime import datetime
 from typing import Literal
@@ -14,7 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.models import Asset, EventRun, StrategyRun, User
+from app.models.models import AiRun, Asset, EventRun, StrategyRun, User
+from app.services import ai_room as ai_rooms
 from app.services import events as event_rooms
 from app.services import strategy as strategy_rooms
 
@@ -38,9 +40,13 @@ def get_active_runs(user: User = Depends(get_current_user), db: Session = Depend
     strategy_run = db.scalars(
         select(StrategyRun).where(StrategyRun.user_id == user.id, StrategyRun.status == "active")
     ).first()
+    ai_run = db.scalars(
+        select(AiRun).where(AiRun.user_id == user.id, AiRun.status == "active")
+    ).first()
     return {
         "event_run_id": event_run.id if event_run is not None else None,
         "strategy_run_id": strategy_run.id if strategy_run is not None else None,
+        "ai_run_id": ai_run.id if ai_run is not None else None,
     }
 
 
@@ -221,6 +227,86 @@ def strategy_run_close(run_id: int, user: User = Depends(get_current_user), db: 
     try:
         strategy_rooms.close_run(run, now)
     except strategy_rooms.RoomError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.commit()
+    return {"status": run.status}
+
+
+# ---------- Type 3 : choc + suite de la courbe calculée par l'IA ----------
+class AiTradeRequest(BaseModel):
+    side: Literal["buy", "sell"]
+    quantity: float = Field(gt=0)
+
+
+def _own_ai_run(db: Session, run_id: int, user: User) -> AiRun:
+    run = db.get(AiRun, run_id)
+    if run is None or run.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tentative introuvable")
+    return run
+
+
+@router.post("/ai/start")
+def start_ai_run(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Démarre une tentative : un actif et un choc sont tirés au hasard."""
+    now = datetime.utcnow()
+    actives = db.scalars(
+        select(AiRun).where(AiRun.user_id == user.id, AiRun.status == "active")
+    ).all()
+    if actives:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Une salle IA est déjà en cours : termine-la d'abord")
+    try:
+        run = ai_rooms.start_run(db, user.id, now)
+    except ai_rooms.RoomError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.add(run)
+    db.commit()
+    return ai_rooms.build_state(db, run, _names(db).get(run.symbol, run.symbol))
+
+
+@router.get("/ai-runs/{run_id}")
+def get_ai_run(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = _own_ai_run(db, run_id, user)
+    return ai_rooms.build_state(db, run, _names(db).get(run.symbol, run.symbol))
+
+
+@router.post("/ai-runs/{run_id}/trade")
+def ai_run_trade(
+    run_id: int,
+    body: AiTradeRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    run = _own_ai_run(db, run_id, user)
+    now = datetime.utcnow()
+    try:
+        ai_rooms.trade(db, run, body.side, body.quantity, now)
+    except ai_rooms.RoomError as exc:
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.commit()
+    return ai_rooms.build_state(db, run, _names(db).get(run.symbol, run.symbol))
+
+
+@router.post("/ai-runs/{run_id}/next")
+def ai_run_next(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = _own_ai_run(db, run_id, user)
+    now = datetime.utcnow()
+    try:
+        ai_rooms.advance(db, run, now)
+    except ai_rooms.RoomError as exc:
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.commit()
+    return ai_rooms.build_state(db, run, _names(db).get(run.symbol, run.symbol))
+
+
+@router.post("/ai-runs/{run_id}/close")
+def ai_run_close(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = _own_ai_run(db, run_id, user)
+    now = datetime.utcnow()
+    try:
+        ai_rooms.close_run(run, now)
+    except ai_rooms.RoomError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     db.commit()
     return {"status": run.status}

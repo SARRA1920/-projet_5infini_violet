@@ -722,3 +722,74 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Type 3 : salle IA (choc + suite calculée par l'IA) ---------- */
+.ag-ai-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 0.5rem 0.2rem 0;
+  font-size: 0.74rem;
+  color: var(--ag-muted);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.ag-ai-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ag-calib-toggle {
+  margin-top: 0.7rem;
+  background: none;
+  border: 1px solid var(--ag-border);
+  border-radius: 6px;
+  color: var(--ag-text);
+  font-size: 0.8rem;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ag-calib-toggle:hover {
+  border-color: var(--ag-muted);
+}
+
+.ag-calib-panel {
+  margin-top: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--ag-border);
+  border-radius: 6px;
+  background: var(--ag-panel-alt);
+}
+
+.ag-calib-panel ul {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ag-calib-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.82rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.ag-calib-panel .ag-muted {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+}

@@ -320,6 +320,33 @@ class EventRun(Base):
 
 
 
+# ---------- Salles de jeu : Type 3, choc + suite de la courbe calculée par l'IA ----------
+class AiRun(Base):
+    """Une tentative dans la salle Type 3 : un choc brutal est appliqué sur une vraie courbe
+    de prix, puis l'IA (modèle stochastique calibré par le module de prédiction) calcule la
+    suite de la courbe. Le joueur joue ensuite sur cette suite générée, jour par jour."""
+
+    __tablename__ = "ai_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    symbol: Mapped[str] = mapped_column(String(20))
+    window_start: Mapped[date_type] = mapped_column(Date)
+    shock_pct: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active / finished / abandoned
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    day_index: Mapped[int] = mapped_column(Integer, default=0)
+    cash: Mapped[float] = mapped_column(Float)
+    positions: Mapped[dict] = mapped_column(JSON, default=dict)
+    equity_curve: Mapped[list] = mapped_column(JSON, default=list)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+
+
 # ---------- Sécurité : journal d'audit ----------
 class AuditLog(Base):
     """Trace des opérations sensibles (connexion, ordres, changements de rôle...)."""
