@@ -241,6 +241,14 @@ export default function StrategyRunPage() {
 
         <div className="ag-right">
           <div className="ag-ticket">
+            {s.advice && (
+              <div className={`ag-advice ${s.advice.action}`}>
+                <span className="ag-advice-tag">
+                  {{ buy: "Acheter", sell: "Vendre", hold: "Attendre", wait: "Attendre", free: "Libre" }[s.advice.action]}
+                </span>
+                <p>{s.advice.message}</p>
+              </div>
+            )}
             <div className="ag-side-tabs">
               <button className={`buy${side === "buy" ? " active" : ""}`} onClick={() => setSide("buy")}>
                 Acheter

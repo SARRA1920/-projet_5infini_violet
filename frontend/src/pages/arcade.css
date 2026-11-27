@@ -460,6 +460,55 @@
   flex-direction: column;
 }
 
+/* Conseil de la stratégie : purement indicatif, jamais contraignant */
+.ag-advice {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--ag-border);
+  background: var(--ag-panel-alt);
+}
+
+.ag-advice p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ag-muted);
+  line-height: 1.4;
+}
+
+.ag-advice-tag {
+  flex: none;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.ag-advice.buy .ag-advice-tag {
+  color: var(--ag-up);
+  background: rgba(38, 166, 154, 0.14);
+}
+
+.ag-advice.sell .ag-advice-tag {
+  color: var(--ag-down);
+  background: rgba(239, 83, 80, 0.14);
+}
+
+.ag-advice.hold .ag-advice-tag,
+.ag-advice.wait .ag-advice-tag {
+  color: #f5c242;
+  background: rgba(245, 194, 66, 0.14);
+}
+
+.ag-advice.free .ag-advice-tag {
+  color: var(--ag-muted);
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .ag-side-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
