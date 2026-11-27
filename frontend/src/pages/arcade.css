@@ -460,54 +460,62 @@
   flex-direction: column;
 }
 
-/* Conseil de la stratégie : purement indicatif, jamais contraignant */
+/* Conseil de la stratégie : purement indicatif, jamais contraignant.
+   Carte à part entière (pas une simple ligne discrète) : eyebrow + action en
+   gros + explication en texte normal, avec une bordure gauche colorée selon
+   l'action pour qu'elle se repère d'un coup d'œil. */
 .ag-advice {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  padding: 0.7rem 0.9rem;
-  border-bottom: 1px solid var(--ag-border);
+  margin: 10px 10px 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--ag-border);
+  border-left: 4px solid var(--ag-muted);
   background: var(--ag-panel-alt);
 }
 
-.ag-advice p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--ag-muted);
-  line-height: 1.4;
-}
-
-.ag-advice-tag {
-  flex: none;
+.ag-advice-label {
+  margin: 0 0 0.3rem;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-}
-
-.ag-advice.buy .ag-advice-tag {
-  color: var(--ag-up);
-  background: rgba(38, 166, 154, 0.14);
-}
-
-.ag-advice.sell .ag-advice-tag {
-  color: var(--ag-down);
-  background: rgba(239, 83, 80, 0.14);
-}
-
-.ag-advice.hold .ag-advice-tag,
-.ag-advice.wait .ag-advice-tag {
-  color: #f5c242;
-  background: rgba(245, 194, 66, 0.14);
-}
-
-.ag-advice.free .ag-advice-tag {
   color: var(--ag-muted);
-  background: rgba(255, 255, 255, 0.07);
 }
+
+.ag-advice-action {
+  margin: 0 0 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ag-advice-icon {
+  font-size: 0.85rem;
+}
+
+.ag-advice-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ag-text);
+  line-height: 1.5;
+}
+
+.ag-advice.buy { border-left-color: var(--ag-up); }
+.ag-advice.buy .ag-advice-action { color: var(--ag-up); }
+
+.ag-advice.sell { border-left-color: var(--ag-down); }
+.ag-advice.sell .ag-advice-action { color: var(--ag-down); }
+
+.ag-advice.hold,
+.ag-advice.wait { border-left-color: #f5c242; }
+.ag-advice.hold .ag-advice-action,
+.ag-advice.wait .ag-advice-action { color: #f5c242; }
+
+.ag-advice.free { border-left-color: var(--ag-muted); }
+.ag-advice.free .ag-advice-action { color: var(--ag-muted); }
 
 .ag-side-tabs {
   display: grid;

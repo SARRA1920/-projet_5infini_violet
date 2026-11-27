@@ -243,10 +243,14 @@ export default function StrategyRunPage() {
           <div className="ag-ticket">
             {s.advice && (
               <div className={`ag-advice ${s.advice.action}`}>
-                <span className="ag-advice-tag">
+                <p className="ag-advice-label">Conseil de la stratégie</p>
+                <p className="ag-advice-action">
+                  <span className="ag-advice-icon">
+                    {{ buy: "▲", sell: "▼", hold: "⏸", wait: "⏸", free: "●" }[s.advice.action]}
+                  </span>
                   {{ buy: "Acheter", sell: "Vendre", hold: "Attendre", wait: "Attendre", free: "Libre" }[s.advice.action]}
-                </span>
-                <p>{s.advice.message}</p>
+                </p>
+                <p className="ag-advice-text">{s.advice.message}</p>
               </div>
             )}
             <div className="ag-side-tabs">
