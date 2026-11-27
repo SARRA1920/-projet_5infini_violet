@@ -271,6 +271,14 @@ def _require_active(run):
         raise RoomError("Cette tentative est terminée")
 
 
+def close_run(run, now: datetime) -> None:
+    """Ferme la tentative avant sa fin, sans la finaliser (pas de score calculé)."""
+    if run.status != "active":
+        raise RoomError("Cette tentative est déjà terminée")
+    run.status = "abandoned"
+    run.finished_at = now
+
+
 def trade(db: Session, run, side: str, quantity: float, now: datetime) -> None:
     _require_active(run)
     crisis = _crisis(db, run)

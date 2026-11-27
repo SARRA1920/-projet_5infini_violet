@@ -106,6 +106,18 @@ def event_run_trade(
     return event_rooms.build_state(run, _names(db))
 
 
+@router.post("/event-runs/{run_id}/close")
+def event_run_close(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = _own_event_run(db, run_id, user)
+    now = datetime.utcnow()
+    try:
+        event_rooms.close_run(run, now)
+    except event_rooms.RoomError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.commit()
+    return {"status": run.status}
+
+
 @router.post("/event-runs/{run_id}/next")
 def event_run_next(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     run = _own_event_run(db, run_id, user)
@@ -200,3 +212,15 @@ def strategy_run_next(run_id: int, user: User = Depends(get_current_user), db: S
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     db.commit()
     return strategy_rooms.build_state(db, run, _names(db).get(run.symbol, run.symbol))
+
+
+@router.post("/strategy-runs/{run_id}/close")
+def strategy_run_close(run_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = _own_strategy_run(db, run_id, user)
+    now = datetime.utcnow()
+    try:
+        strategy_rooms.close_run(run, now)
+    except strategy_rooms.RoomError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    db.commit()
+    return {"status": run.status}

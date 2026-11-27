@@ -249,6 +249,33 @@
   flex-wrap: wrap;
 }
 
+.ag-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.ag-close {
+  background: transparent;
+  border: 1px solid var(--ag-border);
+  color: var(--ag-muted);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ag-close:hover:not(:disabled) {
+  border-color: var(--ag-down);
+  color: var(--ag-down);
+}
+
+.ag-close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .ag-bar h1 {
   font-size: 1.15rem;
   margin: 0.1rem 0;

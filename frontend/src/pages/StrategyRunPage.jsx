@@ -167,6 +167,19 @@ export default function StrategyRunPage() {
     }
   }
 
+  async function closeSession() {
+    if (!window.confirm("Fermer cette session sans la finaliser ? Ta progression ne sera pas comptée.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/salles-de-jeu/strategy-runs/${runId}/close`, { method: "POST" });
+      navigate("/salles-de-jeu");
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
+
   if (error && !s) return <p className="status error">{error}</p>;
   if (!s) return <p className="status">Chargement…</p>;
 
@@ -190,19 +203,26 @@ export default function StrategyRunPage() {
           <h1>{s.symbol} <small>{s.asset_name}</small></h1>
           <p className="ag-day">{s.label} · étape {s.day} / {s.total_steps}</p>
         </div>
-        <div className="ag-kpis">
-          <div>
-            <span>Valeur</span>
-            <strong>{money(s.equity)} $</strong>
+        <div className="ag-bar-right">
+          <div className="ag-kpis">
+            <div>
+              <span>Valeur</span>
+              <strong>{money(s.equity)} $</strong>
+            </div>
+            <div>
+              <span>Rendement</span>
+              <strong className={cls(ret)}>{pct(ret)}</strong>
+            </div>
+            <div>
+              <span>Liquidités</span>
+              <strong>{money(s.cash)} $</strong>
+            </div>
           </div>
-          <div>
-            <span>Rendement</span>
-            <strong className={cls(ret)}>{pct(ret)}</strong>
-          </div>
-          <div>
-            <span>Liquidités</span>
-            <strong>{money(s.cash)} $</strong>
-          </div>
+          {active && (
+            <button className="ag-close" disabled={busy} onClick={closeSession}>
+              ✕ Fermer la session
+            </button>
+          )}
         </div>
       </header>
 
